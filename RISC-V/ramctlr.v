@@ -1,9 +1,9 @@
-module ramctlr(ram_link, cpu_link_adress, cpu_link_write, cpu_link_read, write_enable, clk);
+module ramctlr(ram_link, cpu_link_address, cpu_link_write, cpu_link_read, write_enable, clk);
 
 input [15:0] ram_link;
 input clk;
 input [31:0] cpu_link_write;
-input [31:0] cpu_link_adress;
+input [31:0] cpu_link_address;
 output reg [31:0] cpu_link_read;
 input write_enable;
 
@@ -18,9 +18,9 @@ initial
 
 always @(posedge clk) begin
   if (write_enable) begin
-    RAM[cpu_link_adress] <= cpu_link_write;
+    RAM[cpu_link_address] <= cpu_link_write;
   end
-  cpu_link_read = RAM[cpu_link_adress];
+  cpu_link_read = RAM[cpu_link_address];
 end
 
 endmodule

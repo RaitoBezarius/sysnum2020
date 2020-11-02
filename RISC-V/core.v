@@ -1,4 +1,4 @@
-module core(ram_adress, rom_adress, data_in_ram, data_out_ram, data_in_rom, ram_enable_write, vga_link, clk);
+module core(ram_address, rom_address, data_in_ram, data_out_ram, data_in_rom, ram_enable_write, vga_link, clk);
   //Opcodes uniques
   parameter LUI =     7'b0110111;
   parameter AUIPC =   7'b0010111;
@@ -34,8 +34,8 @@ module core(ram_adress, rom_adress, data_in_ram, data_out_ram, data_in_rom, ram_
 
   parameter NULL =    32'b0;
 
-  output reg [31:0] ram_adress = 32'b0;
-  output reg [31:0] rom_adress = 32'b0;
+  output reg [31:0] ram_address = 32'b0;
+  output reg [31:0] rom_address = 32'b0;
 
   input [31:0] data_in_ram;
   input [31:0] data_in_rom;
@@ -79,7 +79,7 @@ module core(ram_adress, rom_adress, data_in_ram, data_out_ram, data_in_rom, ram_
 
       //Pre-process
       instruction = data_in_rom;
-      rom_adress = pointer;
+      rom_address = pointer;
 
       //Instruction handling
       opcode = instruction[6:0];
