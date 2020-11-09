@@ -2,7 +2,6 @@
 
 Projet de sysnum 2020
 
-<<<<<<< Updated upstream
 # Documentation
 
 Some draft "frozen" (for us) docs are in docs/, including RISC-V specs, RISC-V privileged specs and Interrupt Cookbook from SiFive, please use them as a reference.
@@ -50,6 +49,3 @@ Resources: look in docs, <https://stackoverflow.com/questions/61913210/risc-v-in
 - [ ] Port it to our board.
 - [ ] Make it run.
 - [ ] Champagne.
-=======
-Fait :
->>>>>>> Stashed changes

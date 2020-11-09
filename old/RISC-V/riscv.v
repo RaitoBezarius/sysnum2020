@@ -108,6 +108,7 @@ module riscv(ram_adress, rom_adress, data_in_ram, data_out_ram, data_in_rom, ram
       immS =   instruction[31:25];
       immL =   instruction[31:20];
       case(opcode)
+        7'b0110111 : $display("Got LUI");
         LUI :
           begin
             $display("Got LUI");
