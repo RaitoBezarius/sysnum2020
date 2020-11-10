@@ -61,8 +61,8 @@ module alu(a, b, r, opcode);
     opcode == decr ? a - 1 :
     opcode == plus ? a + b :
     opcode == minus ? a - b :
-    opcode == sll ? a << b :
-    opcode == srl ? a >> b :
+    opcode == sll ? a << b[4:0] :
+    opcode == srl ? a >> b[4:0] :
     opcode == sra ? a >>> b[4:0] :
     opcode == mul ? $signed(a) * $signed(b) :
     opcode == mulh ? ($signed(a) * $signed(b)) >> 32 :

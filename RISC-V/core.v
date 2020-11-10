@@ -198,7 +198,6 @@ module core(ram_address, rom_address, data_in_ram, data_out_ram, data_in_rom, ra
           end
         BRANCH :
           begin
-            //$display("Got Branch");
             case(funct3)
               ADD : if(registers[rs1] == registers[rs2])
                       begin
@@ -207,7 +206,6 @@ module core(ram_address, rom_address, data_in_ram, data_out_ram, data_in_rom, ra
               SLL : begin
                       if(registers[rs1] != registers[rs2])
                       begin
-                        //$display("Went backwards");
                         pointer = pointer + {{{{{{19{immS[6]}}, immS[6]}, immS[5:0]},  rd[0]}, rd[4:1]}, 1'b0} - 1;
                       end
                     end
