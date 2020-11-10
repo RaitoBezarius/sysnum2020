@@ -1,4 +1,4 @@
-module core(ram_address, rom_address, data_in_ram, data_out_ram, data_in_rom, ram_enable_write, vga_link, clk);
+module core(ram_address, rom_address, data_in_ram, data_out_ram, data_in_rom, ram_enable_write, vga_link, alu_a, alu_b, alu_r, alu_opcode, clk);
   //Opcodes uniques
   parameter LUI =     7'b0110111;
   parameter AUIPC =   7'b0010111;
@@ -31,6 +31,30 @@ module core(ram_address, rom_address, data_in_ram, data_out_ram, data_in_rom, ra
   parameter SUBSRA =  7'b0100000;
   parameter MULT =    7'b0000001;
 
+  //ALU opcodes
+  parameter alu_nullOp = 5'b00000;
+  parameter alu_id = 5'b00001;
+  parameter alu_incr = 5'b00010;
+  parameter alu_decr = 5'b00011;
+  parameter alu_plus = 5'b00100;
+  parameter alu_minus = 5'b00101;
+  parameter alu_sll = 5'b00110;
+  parameter alu_srl = 5'b00111;
+  parameter alu_sra = 5'b01000;
+  parameter alu_mul = 5'b01001;
+  parameter alu_mulh = 5'b01010;
+  parameter alu_mulhu = 5'b01011;
+  parameter alu_mulhsu = 5'b01100;
+  parameter alu_div = 5'b01101;
+  parameter alu_divu = 5'b01110;
+  parameter alu_rem = 5'b01111;
+  parameter alu_remu = 5'b10000;
+  parameter alu_orOp = 5'b10001;
+  parameter alu_xorOp = 5'b10010;
+  parameter alu_andOp = 5'b10011;
+  parameter alu_slt = 5'b10100;
+  parameter alu_sltu = 5'b10101;
+
 
   parameter NULL =    32'b0;
 
@@ -47,6 +71,13 @@ module core(ram_address, rom_address, data_in_ram, data_out_ram, data_in_rom, ra
 
 
   input clk;
+
+  //ALU I/O
+  output reg [31:0] alu_a;
+  output reg [31:0] alu_b;
+  output reg [4:0] alu_opcode;
+  input wire [31:0] alu_r;
+
 
   reg [31:0] pointer = 32'b0;
   reg [31:0] instruction = 32'b0;
@@ -100,9 +131,10 @@ module core(ram_address, rom_address, data_in_ram, data_out_ram, data_in_rom, ra
           end
         JAL :
           begin
-            //$display("Got JAL");
-            pointer = pointer + {{19{immL[11]}}, {{{immL[11], {rs1, funct3}}, immL[10:0]}, 1'b0}} - 1;
-            registers[rd] <= pointer + 1;
+            alu_a = pointer;
+            alu_b = {{19{immL[11]}}, {{{immL[11], {rs1, funct3}}, immL[10:0]}, 1'b0}} - 1;
+            pointer = alu_r;
+            registers[rd] = alu_r + 1;
           end
         JALR :
           begin
@@ -110,55 +142,59 @@ module core(ram_address, rom_address, data_in_ram, data_out_ram, data_in_rom, ra
           end
         IMM :
           begin
-            //$display("Got IMM");
+            alu_a = registers[rs1];
+            alu_b = {{20{immL[11]}}, immL};
             case(funct3)
-              ADD : registers[rd] <= registers[rs1] + {{20{immL[11]}}, immL};
-              SLT : registers[rd] <= {31'b0, $signed(registers[rs1]) < $signed({{20{immL[11]}}, immL})};
-              SLTU : registers[rd] <= {31'b0, registers[rs1] < {{20{immL[11]}}, immL}};
-              XOR : registers[rd] <= registers[rs1] ^ {{20{immL[11]}}, immL};
-              OR : registers[rd] <= registers[rs1] || {{20{immL[11]}}, immL};
-              AND : registers[rd] <= registers[rs1] && {{20{immL[11]}}, immL};
+              ADD : alu_opcode = alu_plus;
+              SLT : alu_opcode = alu_slt;
+              SLTU : alu_opcode = alu_sltu;
+              XOR : alu_opcode = alu_xorOp;
+              OR : alu_opcode = alu_orOp;
+              AND :  alu_opcode = alu_andOp;
             endcase
+            registers[rd] = alu_r;
           end
         OP :
           begin
-            //$display("Got OP");
+            alu_a = registers[rs1];
+            alu_b = registers[rs2];
             case(immS)
               VANILLA :
                 begin
                   case(funct3)
-                    ADD : registers[rd] <= registers[rs1] + registers[rs2];
-                    SLL : registers[rd] <= registers[rs1] << registers[rs2][4:0];
-                    SRL : registers[rd] <= registers[rs1] >> registers[rs2][4:0];
-                    SLT : registers[rd] <= {31'b0, $signed(registers[rs1]) < $signed(registers[rs2])};
-                    SLTU : registers[rd] <= {31'b0, registers[rs1] < registers[rs2]};
-                    XOR : registers[rd] <= (registers[rs1] ^ registers[rs2]);
-                    OR : registers[rd] <= (registers[rs1] || registers[rs2]);
-                    AND : registers[rd] <= (registers[rs1] && registers[rs2]);
+                    ADD : alu_opcode = alu_plus;
+                    SLL : alu_opcode = alu_ssl;
+                    SRL : alu_opcode = alu_srl;
+                    SLT : alu_opcode = alu_slt;
+                    SLTU : alu_opcode = alu_sltu;
+                    XOR : alu_opcode = alu_xorOp;
+                    OR : alu_opcode = alu_orOp;
+                    AND : alu_opcode = alu_andOp;
                   endcase
                 end
               SUBSRA :
                 begin
                   case(funct3)
-                    ADD : registers[rd] <= registers[rs1] - registers[rs2];
-                    SRL : registers[rd] <= (registers[rs1] >>> registers[rs2][4:0]);
+                    ADD : alu_opcode = alu_minus;
+                    SRL : alu_opcode = alu_sra;
                   endcase
                 end
               MULT :
                 begin
                   //$display("Got MULTDIV");
                   case(funct3)
-                    ADD : registers[rd] <= ($signed(registers[rs1]) * $signed(registers[rs2]));
-                    SLL : registers[rd] <= ($signed(registers[rs1]) * $signed(registers[rs2])) >> 32;
-                    SLT : registers[rd] <= ($signed(registers[rs1]) * registers[rs2]) >> 32;
-                    SLTU : registers[rd] <= (registers[rs1] * registers[rs2]) >> 32;
-                    XOR : registers[rd] <= ($signed(registers[rs1]) / $signed(registers[rs2]));
-                    SRL : registers[rd] <= (registers[rs1] / registers[rs2]);
-                    OR : registers[rd] <= ($signed(registers[rs1]) % $signed(registers[rs2]));
-                    AND : registers[rd] <= (registers[rs1] % registers[rs2]);
+                    ADD : alu_opcode = alu_mul;
+                    SLL : alu_opcode = alu_mulh;
+                    SLT : alu_opcode = alu_mulhsu;
+                    SLTU : alu_opcode = alu_mulhu;
+                    XOR : alu_opcode = alu_div;
+                    SRL : alu_opcode = alu_divu;
+                    OR : alu_opcode = alu_rem;
+                    AND : alu_opcode = alu_remu;
                   endcase
                 end
               endcase
+              registers[rd] = alu_r;
           end
         BRANCH :
           begin
