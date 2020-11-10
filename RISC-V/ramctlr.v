@@ -1,11 +1,16 @@
-module ramctlr(ram_link, cpu_link_address, cpu_link_write, cpu_link_read, write_enable, clk);
+module ramctlr(DATA, ADDR_OUT, ADDR_IN, VALUE, WD, clk1, clk2);
 
-input [15:0] ram_link;
-input clk;
-input [31:0] cpu_link_write;
-input [31:0] cpu_link_address;
-output reg [31:0] cpu_link_read;
-input write_enable;
+output reg [31:0] DATA;
+
+input clk1, clk2;
+
+input [31:0] VALUE;
+input [31:0] ADDR_OUT;
+input [31:0] ADDR_IN;
+
+reg [31:0] ADDR_OUT_reg;
+
+input WD;
 
 reg [31:0] RAM [127:0];
 
@@ -16,11 +21,14 @@ initial
       RAM[i] = 32'b0;
   end
 
-always @(posedge clk) begin
-  if (write_enable) begin
-    RAM[cpu_link_address] <= cpu_link_write;
-  end
-  cpu_link_read = RAM[cpu_link_address];
+always @(posedge clk1) begin
+  DATA <= RAM[ADDR_OUT_reg];
+  ADDR_OUT_reg <= ADDR_OUT;
+end
+
+always @(posedge clk2) begin
+  if (WD)
+    RAM[ADDR_IN] <= VALUE;
 end
 
 endmodule
