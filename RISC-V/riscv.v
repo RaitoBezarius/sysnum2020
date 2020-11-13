@@ -8,6 +8,7 @@ module riscv(
         inout [15:0] ram_link,
         inout [15:0] rom_link,
         input clk_in,
+        input RST,
         output [2:0] led1,
         output [2:0] led2);
   wire [31:0] rom_address;
@@ -15,6 +16,16 @@ module riscv(
   wire [31:0] ram_address;
   wire [31:0] ram_read;
   wire [31:0] ram_write;
+
+
+  wire [31:0] RAM_DATA_OUT;
+  wire [31:0] RAM_ADDR_OUT;
+  wire [31:0] RAM_ADDR_IN;
+  wire [31:0] RAM_VALUE;
+  wire RAM_WD;
+
+
+
   wire clk;
   wire ram_write_enable;
   wire [31:0] cpu_vga_link;
@@ -33,25 +44,26 @@ module riscv(
 
 
   ramctlr RAM(
-    .DATA(),
-    .ADDR_OUT(),
-    .ADDR_IN(),
-    .VALUE(),
-    .WD(),
+    .DATA(RAM_DATA_OUT),
+    .ADDR_OUT(RAM_ADDR_OUT),
+    .ADDR_IN(RAM_ADDR_IN),
+    .VALUE(RAM_VALUE),
+    .WD(RAM_WD),
     .clk1(clk),
     .clk2(clk)
   );
+
   core CORE(
-    .DATA_ADDR(ram_address),
+    .DATA_ADDR(RAM_ADDR_OUT),
     .INSTR_ADDR(rom_address),
-    .DATA_IN(ram_read),
-    .DATA_OUT(ram_write),
+    .DATA_IN(RAM_DATA_OUT),
+    .DATA_OUT(RAM_VALUE),
     .INSTR_DATA(rom_read),
-    .WRITE_ENABLE(ram_write_enable),
-    .READ_ENABLE(ram_read_enable),
+    .WRITE_ENABLE(RAM_WD),
+    .READ_ENABLE(RAM_READY),
     .BYTE_ENABLE(be),
     .clk(clk));
-  ramctlr RAM(.ram_link(ram_link), .cpu_link_address(ram_address), .cpu_link_read(ram_read), .cpu_link_write(ram_write), .write_enable(ram_write_enable), .clk(clk));
+
   romctlr ROM(.rom_link(rom_link), .cpu_link_read(rom_read), .cpu_link_address(rom_address), .clk(clk));
 
   vgactlr VGA(cpu_vga_link, led1, clk);

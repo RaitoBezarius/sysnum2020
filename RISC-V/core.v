@@ -74,39 +74,52 @@ module core(INSTR_DATA, INSTR_ADDR, DATA_IN, DATA_OUT, DATA_ADDR, BYTE_ENABLE, W
     begin
 
       //Pre-process
+      pc = INSTR_ADDR; // TODO(Ryan): weird, we should remove pc or INSTR_ADDR.
       XIDATA <= INSTR_DATA; // TODO: do better.
 
       //Instruction handling
-      opcode = XIDATA[6:0];
-      funct3 = XIDATA[14:12];
-      rs1 =    XIDATA[19:15];
-      rs2 =    XIDATA[24:20];
-      rd =     XIDATA[11:7];
-      immS =   XIDATA[31:25];
-      immI =   XIDATA[31:20];
+      // FIXME(Ryan): S, I, U, B, J-types of instructions are made to be manually
+      // optimized for decoding in the hardware.
+      // Currently, we let Verilog determine a good way to perform this.
+      // This is not wanted.
+      // Section 2.3 of RISC-V specs explain how to perform such decoding
+      // efficiently. It should be aimed to reproduce a very aggressively
+      // optimized decoder.
+      opcode   = XIDATA[6:0];
+      funct3   = XIDATA[14:12];
+      funct7   = XIDATA[31:25];
+      rs1   =    XIDATA[19:15];
+      rs2   =    XIDATA[24:20];
+      rd   =     XIDATA[11:7];
+      immS   =   XIDATA[31:25];
+      immI   =   XIDATA[31:20];
+      immU   =   XIDATA[31:12];
 
       case(opcode)
         LUI :
           begin
-            $display("Got LUI");
+            registers[rd] <= {12'b0, immU};
           end
         AUIPC :
           begin
-            $display("Got AUIPC");
+            registers[rd] <= pc + {12'b0, immU};
           end
+        // TODO(Ryan): JAL, JALR do not handle misaligned target address.
+        // We should check that target addr is aligned on a 4-byte boundary.
+        // If not, the CPU should go into exception state or trap state, and
+        // halt itself, if no one catch the trap state.
         JAL :
           begin
-            //$display("Got JAL");
             pc = pc + {{19{immI[11]}}, {{{immI[11], {rs1, funct3}}, immI[10:0]}, 1'b0}} - 1;
-            registers[rd] <= pc + 1;
+            registers[rd] <= rd == X0 ? 0 : pc + 1;
           end
         JALR :
           begin
-            $display("Got JALR");
+            pc = {registers[rs1] + $signed(immI), 1'b0} - 1;
+            registers[rd] <= rd == X0 ? 0 : pc + 1;
           end
         IMM :
           begin
-            //$display("Got IMM");
             case(funct3)
               ADD : registers[rd] <= registers[rs1] + {{20{immI[11]}}, immI};
               SLT : registers[rd] <= {31'b0, $signed(registers[rs1]) < $signed({{20{immI[11]}}, immI})};
@@ -118,7 +131,6 @@ module core(INSTR_DATA, INSTR_ADDR, DATA_IN, DATA_OUT, DATA_ADDR, BYTE_ENABLE, W
           end
         OP :
           begin
-            //$display("Got OP");
             case(immS)
               VANILLA :
                 begin
@@ -142,7 +154,6 @@ module core(INSTR_DATA, INSTR_ADDR, DATA_IN, DATA_OUT, DATA_ADDR, BYTE_ENABLE, W
                 end
               MULT :
                 begin
-                  //$display("Got MULTDIV");
                   case(funct3)
                     ADD : registers[rd] <= ($signed(registers[rs1]) * $signed(registers[rs2]));
                     SLL : registers[rd] <= ($signed(registers[rs1]) * $signed(registers[rs2])) >> 32;
@@ -158,7 +169,6 @@ module core(INSTR_DATA, INSTR_ADDR, DATA_IN, DATA_OUT, DATA_ADDR, BYTE_ENABLE, W
           end
         BRANCH :
           begin
-            //$display("Got Branch");
             case(funct3)
               ADD : if(registers[rs1] == registers[rs2])
                       begin
@@ -167,7 +177,6 @@ module core(INSTR_DATA, INSTR_ADDR, DATA_IN, DATA_OUT, DATA_ADDR, BYTE_ENABLE, W
               SLL : begin
                       if(registers[rs1] != registers[rs2])
                       begin
-                        //$display("Went backwards");
                         pc = pc + {{{{{{19{immS[6]}}, immS[6]}, immS[5:0]},  rd[0]}, rd[4:1]}, 1'b0} - 1;
                       end
                     end
@@ -196,7 +205,6 @@ module core(INSTR_DATA, INSTR_ADDR, DATA_IN, DATA_OUT, DATA_ADDR, BYTE_ENABLE, W
             // Perform a read.
             assign READ_ENABLE = 1;
             pc = pc - 1;
-            // FIXME: debug
             $display("Got LOAD for addr: %h", DATA_ADDR);
             // registers[rd] <= data_in_ram;
           end
@@ -206,7 +214,10 @@ module core(INSTR_DATA, INSTR_ADDR, DATA_IN, DATA_OUT, DATA_ADDR, BYTE_ENABLE, W
           end
         MISCMEM :
           begin
-            $display("Got MISCMEM");
+            $display("Got MISCMEM (FENCE)");
+            // FIXME(Ryan): Basically, a nop for now. It makes no sense to
+            // order operations until we have multiple cores or stuff like
+            // this.
           end
         SYSTEM :
           begin
@@ -214,7 +225,7 @@ module core(INSTR_DATA, INSTR_ADDR, DATA_IN, DATA_OUT, DATA_ADDR, BYTE_ENABLE, W
           end
         //default : $display("ERROR : ");
       endcase
-      assign IADDR = pc + 1;
+      assign INSTR_ADDR = pc + 1;
       pc = pc + 1;
     end
 endmodule
