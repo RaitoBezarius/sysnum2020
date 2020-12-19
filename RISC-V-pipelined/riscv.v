@@ -14,7 +14,7 @@ module riscv(
 	rom_in,
 
     fw_rom_addr,
-    fw_rom_in,
+    fw_rom_in
 );
 
 input clk;
@@ -31,10 +31,8 @@ input  [31:0] rom_in;
 output [31:0] fw_rom_addr;
 input  [31:0] fw_rom_in;
 
-assign ram_data_out = rom_in;
-
 // Registers
-reg [31:0] registers [1:0][15:0];
+reg [31:0] registers [1:0][31:0];
 
 integer i;
 integer k;
@@ -122,7 +120,7 @@ wire [ 4:0] exe_op;
 reg  [ 4:0] exe_rd;
 reg  [31:0] exe_pc;
 reg  [31:0] exe_inst;
-reg  [11:0] exe_offset;
+reg  [31:0] exe_offset;
 reg  [ 2:0] exe_mem_data_ty;
 
 parameter EXE_ADD   = 5'b00000;
@@ -150,7 +148,7 @@ parameter EXE_STORE = 5'b10001;
 parameter EXE_TRAP  = 5'b10010;
 
 parameter EXE_NOP   = 5'b10011;
-parameter EXE_ERR   = 5'b10011;
+parameter EXE_ERR   = 5'b10100;
 
 parameter DATA_B  = 3'b000;
 parameter DATA_H  = 3'b001;
@@ -173,7 +171,7 @@ parameter MEM_FORWARD = 3'b000;
 parameter MEM_JUMP    = 3'b001;
 parameter MEM_LOAD    = 3'b010;
 parameter MEM_STORE   = 3'b011;
-parameter MEM_TRAP    = 5'b100;
+parameter MEM_TRAP    = 3'b100;
 parameter MEM_NOP     = 3'b101;
 parameter MEM_ERR     = 3'b110;
 
@@ -204,7 +202,7 @@ always @(posedge clk) begin
     case(if_op)
         IF_FETCH: begin
             id_mode <= if_mode;
-            instruction <= if_mode == DUAL_MODE ? fw_rom_in : rom_in;
+            instruction <= if_mode == NORMAL_MODE ? rom_in : fw_rom_in;
             id_op_request <= ID_DECODE;
             id_pc <= pc;
         end
@@ -239,7 +237,7 @@ wire [4:0] rd;
 wire [4:0] rs1;
 wire [4:0] rs2;
 wire [2:0] func3;
-wire [2:0] func7;
+wire [6:0] func7;
 
 wire [31:0] rs1_val;
 wire [31:0] rs2_val;
@@ -253,7 +251,7 @@ assign rd    = instruction[11:7 ];
 assign func3 = instruction[14:12];
 assign func7 = instruction[31:25];
 
-wire [1:0] branch_inst;
+wire [4:0] branch_inst;
 wire reverse_operands;
 
 assign alu_op =
@@ -423,7 +421,9 @@ always @(posedge clk) begin
 					fwd_rs1 <= 0;
 					fwd_rs2 <= 0;
 				end
-				// default: we don't need to decode anything.
+                default: begin
+                    // we don't need to decode anything.
+                end
 			endcase
 		end
 		ID_NOP: begin
@@ -448,8 +448,8 @@ assign shift_amount = exe_op_2[4:0];
 assign exe_res =
 	exe_op == EXE_ADD  ? (exe_op_1 + exe_op_2) :
 	exe_op == EXE_SUB  ? (exe_op_1 - exe_op_2) :
-	exe_op == EXE_SLT  ? ($signed(exe_op_1) < $signed(exe_op_2)) :
-	exe_op == EXE_SLTU ? (exe_op_1 < exe_op_2) :
+	exe_op == EXE_SLT  ? (($signed(exe_op_1) < $signed(exe_op_2)) ? 1 : 0) :
+	exe_op == EXE_SLTU ? (exe_op_1 < exe_op_2 ? 1 : 0) :
 	exe_op == EXE_AND  ? (exe_op_1 & exe_op_2) :
 	exe_op == EXE_OR   ? (exe_op_1 | exe_op_2) :
 	exe_op == EXE_XOR  ? (exe_op_1 ^ exe_op_2) :
@@ -521,9 +521,32 @@ always @(posedge clk) begin
 end
 
 // MEM block
+wire [31:0] tmp_ram_data;
+assign tmp_ram_data =
+    (mem_data_ty == DATA_B) ? {
+        {24{tmp_ram[ram_read_addr][7]}},
+        tmp_ram[ram_read_addr]
+    } : (mem_data_ty == DATA_H) ? {
+        {16{tmp_ram[ram_read_addr + 1][7]}},
+        tmp_ram[ram_read_addr + 1],
+        tmp_ram[ram_read_addr]
+    } : (mem_data_ty == DATA_W) ? {
+        tmp_ram[ram_read_addr + 3],
+        tmp_ram[ram_read_addr + 2],
+        tmp_ram[ram_read_addr + 1],
+        tmp_ram[ram_read_addr]
+    } : (mem_data_ty == DATA_BU) ? {
+        24'b0,
+        tmp_ram[ram_read_addr]
+    } : {
+        16'b0,
+        tmp_ram[ram_read_addr + 1],
+        tmp_ram[ram_read_addr]
+    };
+
 assign mem_triggers_write = (mem_op == MEM_FORWARD || mem_op == MEM_LOAD);
 assign mem_fwd = mem_op == MEM_FORWARD ? res :
-    mem_mode == NORMAL_MODE ? tmp_ram[ram_read_addr] : // was ram_data_out
+    mem_mode == NORMAL_MODE ? tmp_ram_data : // was ram_data_in
     dual_data;
 
 assign ram_read_addr    = mem_target;
@@ -542,7 +565,7 @@ assign dual_data = mem_target[8] == 0 ?
 // Will be eventually removed, when we implement caches and
 // a real RAM controller.
 
-reg [8:0] tmp_ram [511:0];
+reg [7:0] tmp_ram [511:0];
 
 // end
 
@@ -569,21 +592,7 @@ always @(posedge clk) begin
 			wb_op <= WB_WRITE;
             
             if(mem_mode == NORMAL_MODE) begin
-                if(mem_data_ty == DATA_B) begin
-                    wb_res <= tmp_ram[ram_read_addr];
-                end else if(mem_data_ty == DATA_H) begin
-                    wb_res <= {
-                        tmp_ram[ram_read_addr + 1],
-                        tmp_ram[ram_read_addr]
-                    };
-                end else begin
-                    wb_res <= {
-                        tmp_ram[ram_read_addr + 3],
-                        tmp_ram[ram_read_addr + 2],
-                        tmp_ram[ram_read_addr + 1],
-                        tmp_ram[ram_read_addr]
-                    };
-                end
+                wb_res <= tmp_ram_data;
             end else begin // Dual mode
                 wb_res <= dual_data;
             end
@@ -601,7 +610,7 @@ always @(posedge clk) begin
                     tmp_ram[ram_write_addr] <= res[7:0];
                     tmp_ram[ram_write_addr + 1] <= res[15:8];
                     tmp_ram[ram_write_addr + 2] <= res[23:16];
-                    tmp_ram[ram_write_addr + 3] <= res[32:24];;
+                    tmp_ram[ram_write_addr + 3] <= res[31:24];;
                 end
             end else if(mem_mode == DUAL_MODE) begin
                 // We store directly 32-bit words
@@ -626,6 +635,9 @@ always @(posedge clk) begin
         end
 		MEM_NOP    : wb_op <= WB_NOP;
 		MEM_ERR    : wb_op <= WB_ERR;
+        default: begin
+            // We don't need to do anything.
+        end
 	endcase
 end
 
@@ -688,6 +700,9 @@ always @(posedge clk) begin
                 registers[DUAL_MODE][1] <= next_pc;
             end
 		end
+        default: begin
+            // We don't need to do anything.
+        end
 	endcase
 end
 
