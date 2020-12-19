@@ -1,14 +1,19 @@
-
 `default_nettype none
+`include "core/memory/block_ram.sv"
 
-module riscv(
+module riscv
+#(
+  parameter XLEN = 32,
+  parameter W = XLEN
+)
+(
 	clk,
 
-	ram_read_addr,
-	ram_write_addr,
-	ram_write_enable,
-	ram_data_out,
-	ram_data_in,
+  o_wb_we,
+  o_wb_sel,
+  i_data,
+  o_data,
+  o_data_addr,
 
 	rom_addr,
 	rom_in,
@@ -19,19 +24,17 @@ module riscv(
 
 input clk;
 
-output [31:0] ram_read_addr;
-output [31:0] ram_write_addr;
-output        ram_write_enable;
-output [31:0] ram_data_out;
-input  [31:0] ram_data_in;
+output wire [W-1:0] o_data_addr;
+output wire o_wb_we;
+output wire [2:0] o_wb_sel;
+output reg  [W-1:0] o_data;
+input  wire [W-1:0] i_data;
 
 output [31:0] rom_addr;
 input  [31:0] rom_in;
 
 output [31:0] fw_rom_addr;
 input  [31:0] fw_rom_in;
-
-assign ram_data_out = rom_in;
 
 // Registers
 reg [31:0] registers [1:0][15:0];
@@ -523,13 +526,12 @@ end
 // MEM block
 assign mem_triggers_write = (mem_op == MEM_FORWARD || mem_op == MEM_LOAD);
 assign mem_fwd = mem_op == MEM_FORWARD ? res :
-    mem_mode == NORMAL_MODE ? tmp_ram[ram_read_addr] : // was ram_data_out
+    mem_mode == NORMAL_MODE ? i_data :
     dual_data;
 
-assign ram_read_addr    = mem_target;
-assign ram_write_addr   = mem_target;
-assign ram_write_enable = (mem_mode == NORMAL_MODE && mem_op == MEM_STORE);
-assign ram_data_out     = res;
+assign o_wb_sel = mem_data_ty;
+assign o_data_addr = mem_target;
+assign o_wb_we = (mem_mode == NORMAL_MODE && mem_op == MEM_STORE);
 
 wire [31:0] dual_data;
 assign dual_data = mem_target[8] == 0 ?
@@ -537,12 +539,6 @@ assign dual_data = mem_target[8] == 0 ?
             (mem_target[0] ? mtime : mtimecmp) :*/
             registers[NORMAL_MODE][mem_target[4:0]]
         ) : extra_regs[mem_target[7:0]];
-
-// Temporary RAM block
-// Will be eventually removed, when we implement caches and
-// a real RAM controller.
-
-reg [8:0] tmp_ram [511:0];
 
 // end
 
@@ -569,21 +565,7 @@ always @(posedge clk) begin
 			wb_op <= WB_WRITE;
             
             if(mem_mode == NORMAL_MODE) begin
-                if(mem_data_ty == DATA_B) begin
-                    wb_res <= tmp_ram[ram_read_addr];
-                end else if(mem_data_ty == DATA_H) begin
-                    wb_res <= {
-                        tmp_ram[ram_read_addr + 1],
-                        tmp_ram[ram_read_addr]
-                    };
-                end else begin
-                    wb_res <= {
-                        tmp_ram[ram_read_addr + 3],
-                        tmp_ram[ram_read_addr + 2],
-                        tmp_ram[ram_read_addr + 1],
-                        tmp_ram[ram_read_addr]
-                    };
-                end
+              wb_res <= i_data;
             end else begin // Dual mode
                 wb_res <= dual_data;
             end
@@ -593,15 +575,11 @@ always @(posedge clk) begin
             
             if(mem_mode == NORMAL_MODE) begin
                 if(mem_data_ty == DATA_B) begin
-                    tmp_ram[ram_write_addr] <= res[7:0];
+                    o_data <= {24'b0, res[7:0]};
                 end else if(mem_data_ty == DATA_H) begin
-                    tmp_ram[ram_write_addr] <= res[7:0];
-                    tmp_ram[ram_write_addr + 1] <= res[15:8];
+                    o_data <= {16'b0, res[15:0]};
                 end else begin
-                    tmp_ram[ram_write_addr] <= res[7:0];
-                    tmp_ram[ram_write_addr + 1] <= res[15:8];
-                    tmp_ram[ram_write_addr + 2] <= res[23:16];
-                    tmp_ram[ram_write_addr + 3] <= res[32:24];;
+                    o_data <= res;
                 end
             end else if(mem_mode == DUAL_MODE) begin
                 // We store directly 32-bit words

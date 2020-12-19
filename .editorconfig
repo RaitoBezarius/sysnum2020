@@ -1,6 +1,6 @@
 root = true
 
-[*.v]
+[*.{sv,v}]
 indent_style = space
 indent_size = 2
 
