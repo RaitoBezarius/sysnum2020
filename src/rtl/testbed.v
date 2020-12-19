@@ -120,7 +120,7 @@ initial begin
         $display("Simulation starts now and finish in 5000 ticks.");
         $dumpfile("test.vcd");
         $dumpvars(0, testbed);
-        #5000 $finish;
+        #10000 $finish;
 end
 
 endmodule
