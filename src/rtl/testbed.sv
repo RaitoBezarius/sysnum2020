@@ -99,8 +99,6 @@ hart #(
 initial begin
         $display("Simulation starts now and finish in %d ticks.", `N_TICKS);
         $dumpfile("trace.vcd");
-        $dumpvars(0, testbed);
-        #`N_TICKS $finish;
 end
 
 endmodule

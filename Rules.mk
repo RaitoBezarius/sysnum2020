@@ -14,7 +14,7 @@ include $(dir)/Makefile.mk
 targets: mk_build_directory $(TGT_FIRMWARE) $(TGT_SOFTWARE) $(TGT_SIM_RUNTIME)
 
 test: targets
-	cd $(BUILDDIR) && $(SIMULATOR) $(TESTBED_EXECUTABLE) $(SIMULATOR-FLAGS)
+	cd $(BUILDDIR) && ./$(TESTBED_EXECUTABLE) $(SIMULATOR-FLAGS)
 
 dis-soft:
 	$(RISCV-OBJDUMP) -d $(TGT_SOFTWARE_ELF)
@@ -22,6 +22,7 @@ dis-soft:
 .PHONY:	clean
 clean:
 	rm -f $(CLEAN)
+	rm -rf $(VERILOG_GENERATED)
 
 .SECONDARY:	$(CLEAN)
 
