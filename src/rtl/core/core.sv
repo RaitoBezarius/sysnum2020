@@ -11,6 +11,7 @@ module riscv
 
   o_wb_we,
   o_wb_sel,
+  o_wb_stb,
   i_data,
   o_data,
   o_data_addr,
@@ -25,7 +26,7 @@ module riscv
 input clk;
 
 output wire [W-1:0] o_data_addr;
-output wire o_wb_we;
+output wire o_wb_we, o_wb_stb;
 output wire [2:0] o_wb_sel;
 output reg  [W-1:0] o_data;
 input  wire [W-1:0] i_data;
@@ -34,7 +35,7 @@ output [W-1:0] rom_addr;
 input  [W-1:0] rom_in;
 
 output [W-1:0] fw_rom_addr;
-input  [31:0] fw_rom_in;
+input  [W-1:0] fw_rom_in;
 
 // Registers
 reg [W-1:0] registers [1:0][15:0];
@@ -293,8 +294,8 @@ always @(posedge clk) begin
 	case(id_op)
 		ID_DECODE: begin
             exe_mode        <= id_mode;
-			exe_rd          <= rd;
-			exe_pc          <= id_pc;
+            exe_rd          <= rd;
+            exe_pc          <= id_pc;
             exe_inst        <= instruction;
             exe_mem_data_ty <= func3;
 
@@ -471,7 +472,7 @@ assign cond_pass =
 	0;
 
 always @(posedge clk) begin
-	mem_rd      <= exe_rd;
+    mem_rd      <= exe_rd;
     mem_data_ty <= exe_mem_data_ty;
 
     if(exe_op != EXE_NOP) begin
@@ -532,6 +533,8 @@ assign mem_fwd = mem_op == MEM_FORWARD ? res :
 assign o_wb_sel = mem_data_ty;
 assign o_data_addr = mem_target;
 assign o_wb_we = (mem_mode == NORMAL_MODE && mem_op == MEM_STORE);
+assign o_wb_stb = (mem_mode == NORMAL_MODE && (mem_op == MEM_STORE || mem_op == MEM_LOAD)); // Initiate an operation
+
 
 wire [31:0] dual_data;
 assign dual_data = mem_target[8] == 0 ?
@@ -543,8 +546,7 @@ assign dual_data = mem_target[8] == 0 ?
 // end
 
 always @(posedge clk) begin
-	wb_rd  <= mem_rd;
-	
+    wb_rd  <= mem_rd;
     if(mem_op != MEM_NOP) begin
         wb_mode <= mem_mode;
         wb_pc   <= mem_pc;
@@ -563,42 +565,39 @@ always @(posedge clk) begin
 		end
 		MEM_LOAD   : begin
 			wb_op <= WB_WRITE;
-            
-            if(mem_mode == NORMAL_MODE) begin
-              $strobe("[MEM] load at %d of %d", o_data_addr, i_data);
-              wb_res <= i_data;
-            end else begin // Dual mode
-                wb_res <= dual_data;
-            end
+      if(mem_mode == NORMAL_MODE) begin
+        wb_res <= i_data;
+      end else begin // Dual mode
+          wb_res <= dual_data;
+      end
 		end
 		MEM_STORE  : begin
 			wb_op <= WB_NOP;
             
-            if(mem_mode == NORMAL_MODE) begin
-                if(mem_data_ty == DATA_B) begin
-                    o_data <= {24'b0, res[7:0]};
-                end else if(mem_data_ty == DATA_H) begin
-                    o_data <= {16'b0, res[15:0]};
-                end else begin
-                    o_data <= res;
-                end
-                $strobe("[MEM] store request at addr %d of %d", o_data_addr, res);
-            end else if(mem_mode == DUAL_MODE) begin
-                // We store directly 32-bit words
-                if(mem_target[8] == 0) begin
-                    /*if(mem_target[5] == 0) begin
-                        if(mem_target[0] == 0) begin
-                            
-                        end else begin
+      if(mem_mode == NORMAL_MODE) begin
+          if(mem_data_ty == DATA_B) begin
+              o_data <= {24'b0, res[7:0]};
+          end else if(mem_data_ty == DATA_H) begin
+              o_data <= {16'b0, res[15:0]};
+          end else begin
+              o_data <= res;
+          end
+      end else if(mem_mode == DUAL_MODE) begin
+          // We store directly 32-bit words
+          if(mem_target[8] == 0) begin
+              /*if(mem_target[5] == 0) begin
+                  if(mem_target[0] == 0) begin
+                      
+                  end else begin
 
-                        end
-                    end else begin*/
-                        registers[NORMAL_MODE][mem_target[4:0]] <= res;
-                    //end
-                end else begin
-                    extra_regs[mem_target[7:0]] <= res;
-                end
-            end
+                  end
+              end else begin*/
+                  registers[NORMAL_MODE][mem_target[4:0]] <= res;
+              //end
+          end else begin
+              extra_regs[mem_target[7:0]] <= res;
+          end
+      end
 		end
         MEM_TRAP   : begin
             wb_op <= WB_TRAP;
@@ -612,14 +611,14 @@ end
 // WB block
 assign wb_triggers_write = (wb_op == WB_WRITE);
 assign wb_fwd = wb_res;
-wire [W-1:0] next_pc = pc + 4;
+wire [W-1:0] next_pc;
 
 assign kill = (wb_op == WB_JUMP || wb_op == WB_TRAP || wb_op == WB_ERR);
 assign next_pc =
     (wb_op == WB_JUMP) ? wb_res :
     (wb_op == WB_TRAP) ? 4 :
     (wb_op == WB_ERR ) ? 0 :
-    pc + 4;
+    wb_pc + 4;
 
 always @(posedge clk) begin
     if(id_mode == NORMAL_MODE) begin
@@ -668,7 +667,6 @@ always @(posedge clk) begin
                 registers[DUAL_MODE][1] <= next_pc;
             end
 		end
-    default: $strobe("Writeback phase: %d", wb_op);
 	endcase
 end
 

@@ -3,7 +3,7 @@
 module block_ram
 #(
   parameter XLEN = 32,
-  parameter LGMEMSZ = 9,
+  parameter LGMEMSZ = 19,
   parameter W = XLEN
 )
 (
@@ -30,6 +30,9 @@ reg [W-1:0] ram [(1 << LGMEMSZ) - 1:0];
 integer k;
 initial 
 begin
+  o_wb_ack = 1'b0;
+  for (k = 0 ; k < W ; k = k + 1)
+    o_wb_data[k] = 0;
   for (k = 0; k < (1 << LGMEMSZ); k = k + 1)
     ram[k] = 0;
 end

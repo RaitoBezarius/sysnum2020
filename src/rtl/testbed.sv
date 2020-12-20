@@ -34,7 +34,7 @@ end
 wire [W-1:0] rom_addr, rom_out;
 reg [W-1:0] ROM [511:0];
 initial $readmemh("test.hex", ROM);
-assign rom_out = ROM[rom_addr];
+assign rom_out = ROM[rom_addr >> 2];
 always @(posedge clk) begin
     if(rom_addr[1:0] != 2'b00) begin
 		$display("Misaligned ROM address !");
@@ -61,7 +61,7 @@ end
 
 // B-RAM on FPGA. Will be useful for L1d.
 wire [W-1:0] bram_i_addr, bram_i_data, bram_o_data;
-wire bram_we, bram_stall, bram_ack;
+wire bram_we, bram_stall, bram_ack, bram_stb;
 wire [2:0] bram_sel;
 
 // A FPGA Block RAM.
@@ -70,7 +70,7 @@ block_ram #(
 ) ram(
   .i_clk(clk),
   .i_reset(reset),
-  .i_wb_stb(),
+  .i_wb_stb(bram_stb),
 
   .i_addr(bram_i_addr),
   .i_data(bram_i_data),
@@ -93,6 +93,7 @@ riscv #(
   .o_data_addr(bram_i_addr),
   .o_wb_sel(bram_sel),
   .o_wb_we(bram_we),
+  .o_wb_stb(bram_stb),
 
 	.rom_addr(rom_addr),
 	.rom_in(rom_out),

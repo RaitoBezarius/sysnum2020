@@ -16,6 +16,9 @@ targets: mk_build_directory $(TGT_FIRMWARE) $(TGT_SOFTWARE) $(TGT_SIM_RUNTIME)
 test: targets
 	cd $(BUILDDIR) && $(SIMULATOR) $(TESTBED_EXECUTABLE) $(SIMULATOR-FLAGS)
 
+dis-soft:
+	$(RISCV-OBJDUMP) -d $(TGT_SOFTWARE_ELF)
+
 .PHONY:	clean
 clean:
 	rm -f $(CLEAN)

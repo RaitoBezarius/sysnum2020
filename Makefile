@@ -2,6 +2,7 @@
 RISCV-CC = riscv32-none-elf-gcc
 RISCV-AS = riscv32-none-elf-as
 RISCV-OBJCOPY = riscv32-none-elf-objcopy
+RISCV-OBJDUMP = riscv32-none-elf-objdump
 # For Verilog hex files
 RISCV-ELF2HEX = riscv32-none-elf-elf2hex
 
@@ -28,7 +29,7 @@ DUAL_MODE_FIRMWARE_SRC = src/firmware/firmware.s
 
 # Simulation/FPGA configuration
 TEST_PROGRAM_SRC = src/software/test.c
-SIMULATION_N_TICKS = 100
+SIMULATION_N_TICKS = 500
 
 TESTBED_SOURCE = src/rtl/testbed.sv
 TESTBED_EXECUTABLE = simulation.vvp
