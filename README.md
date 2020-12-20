@@ -12,6 +12,15 @@ It targets the Arty S7-50 as a FPGA and otherwise works well with `iverilog`.
 
 This repository has a `shell.nix`, `Makefile` and `.envrc` (direnv).
 
+## Enjoying caching
+
+```shell
+nix-env -iA cachix -f https://cachix.org/api/v1/install
+cachix use sysnum-riscv
+```
+
+Thanks to ENS for providing build servers :).
+
 ## `nix-shell`
 
 Just running `nix-shell shell.nix` will provide you with a RISC-V 32 bits toolchain and `Makefile` will work out of the box.
