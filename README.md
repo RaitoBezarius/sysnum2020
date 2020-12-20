@@ -8,6 +8,35 @@ At the time of writing, it is currently able to run a very simple subset of RV32
 
 It targets the Arty S7-50 as a FPGA and otherwise works well with `iverilog`.
 
+# Instructions on how to run
+
+This repository has a `shell.nix`, `Makefile` and `.envrc` (direnv).
+
+## Enjoying caching
+
+```shell
+nix-env -iA cachix -f https://cachix.org/api/v1/install
+cachix use sysnum-riscv
+```
+
+Thanks to ENS for providing build servers :).
+
+## `nix-shell`
+
+Just running `nix-shell shell.nix` will provide you with a RISC-V 32 bits toolchain and `Makefile` will work out of the box.
+
+## `.envrc`
+
+Just allow the file: `direnv allow` and your shell will be provided with all that is needed.
+
+## Testing
+
+`make test` will run a test program and test firmware in simulation with Icarus Verilog.
+
+## FPGA test
+
+TODO: package the Vivado toolchain nicely and provide the bitstream generation mechanism and upload.
+
 # Documentation
 
 Some draft "frozen" (for us) docs are in docs/, including RISC-V specs, RISC-V privileged specs and Interrupt Cookbook from SiFive, please use them as a reference.
@@ -64,60 +93,97 @@ A way to solve this is to use branch prediction, but it requires statistical str
 
 # TODO
 
-## Core: RV64IM
+## Core: RV32I (Julien & Ryan)
 
 - [x] XLEN=32
-- [ ] XLEN=64
 
 - [x] JAL
 - [x] IMM
-- [x] OP: VANILA/SUBSRA/MULT — ADD/SLL/SRL/SLT/SLTU/XOR/OR/AND/ADD/etc.
+- [x] OP: VANILLA/SUBSRA/MULT — ADD/SLL/SRL/SLT/SLTU/XOR/OR/AND/ADD/etc.
 - [x] BRANCH: ADD/SLL/XOR/SRL/OR/AND
 - [x] LUI: load upper immediate
 - [x] AUIPC: add upper immediate to pc
 - [x] JALR: jump and link register
 
-- [ ] LOAD
-- [ ] STORE
+- [x] LOAD
+- [x] STORE
 - [ ] MISCMEM/FENCE
-- [ ] SYSTEM
+- [x] SYSTEM
 
-### Core refactor (Ryan + Constantin)
+- [ ] 5-staged pipeline
 
-- [ ] Get out the ALU (Constantin).
-- [ ] Introduce HALT, RESET, STALL signals (Ryan).
-- [ ] Rewrite the memory interface system to support async signalling of memory ack'd a read (Ryan).
-- [ ] Rewrite the ROM interface (Ryan).
+- [ ] Wishbone interconnection with a (FPGA) block RAM
+- [ ] HALT signal
+- [x] STALL signal
+- [ ] RESET signal
 
-## 64-bits (Julien?)
+## ALU: M extension (???)
 
-- [ ] W instructions variants: `add(i)w, subw, sxxw`, etc.
-- [ ] 64-bits LUI
-- [ ] 64-bits AUIPC
-- [ ] 64-bits LOAD
-- [ ] 64-bits STORE
-- [ ] LD
-- [ ] LW
-- [ ] LWU
-- [ ] 64-bits CSR: RDCYCLE, RDTIME, RDISTRET. Make illegal the H variants in RV64I.
+- [ ] Send M-related instructions to another unit.
 
-- [ ] 64-bits version of M-extension: mult/div.
+## VGA Controller (Constantin)
 
-## IRQ (Ryan)
+- [x] Initial controller
+- [ ] Wishbone interconnect
+- [ ] Memory mapping
+- [ ] Simple primitives to show stuff
+
+**Bonus for Ryan** :
+
+- [ ] Implement a framebuffer driver in linux for it.
+
+## RISC-V compliance testsuite & Verilator (Ryan & Julien)
+
+- [x] Submodule for RISC-V compliance testsuite
+- [ ] Write the test harness with our own Makefile
+- [ ] Move to Verilator
+- [ ] Write a simulation model to test our CPU with Verilator
+- [ ] Report the results of the compliance testsuite
+- [ ] Put it in GitHub Actions CI
+
+## Data cache / instruction cache (Ryan)
+
+- [ ] Lay out the bare minimum in the CPU
+- [ ] 2-way associative simple read-write data cache
+- [ ] Formal verification using Symbiyosys
+- [ ] Connect it to the CPU
+
+## MMU (Ryan)
+
+- [ ] Lay out the bare minimum in the CPU
+- [ ] Simple permissions model
+- [ ] IO memory mapping (?)
+- [ ] Formal verification using Symbiyosys
+- [ ] Connect it to the CPU
+
+## IRQ / Privileged mode (Julien)
 
 Resources: look in docs, <https://stackoverflow.com/questions/61913210/risc-v-interrupt-handling-flow>, <http://faculty.salina.k-state.edu/tim/ossg/Introduction/OSworking.html>, <
 
-- [ ] Split up tasks
+- [x] Split up tasks
+- [x] Dual mode
 - [ ] Implement a CLINT
+
+## RISC-V debug extension (???)
+
+Go go go : <https://riscv.org/wp-content/uploads/2019/03/riscv-debug-release.pdf>
+
+## Arty S7-50 FPGA-specific (???)
+
+- [ ] Generate the DDR3L Xilinx AXI controller
+- [ ] Write a AXI to Wishbone bridge
+- [ ] Connect the 100MHz clock to the RAM controller
+- [ ] Connect the DDR3L to the CPU or the cache
 
 ## FreeRTOS (???)
 
-- [ ] Port it to our board.
+- [ ] Port it to our board (instant if CLINT is implemented)
 - [ ] Make it run.
-- [ ] Champagne.
+- [ ] Put the clock on it.
 
-## Linux (!?)
+## Linux (Ryan, if he can, that is.)
 
-- [ ] Implement privileged extension, at least, M/S.
-- [ ] Write an MMU.
-- [ ] Make it run.
+- [ ] Implement a micro-BIOS to load an operating system
+- [ ] Write a DTS file for our board and implementation
+- [ ] Compile a RISC-V Linux
+- [ ] Port coreboot to this board (?!)
