@@ -3,3 +3,4 @@ old/RISC-V/Assembler_vole
 
 olg/RISC-V/riscv.vcd
 olg/RISC-V/a.out
+build/
