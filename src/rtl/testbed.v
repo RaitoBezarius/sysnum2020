@@ -43,7 +43,7 @@ end
 wire [31:0] rom_addr;
 wire [31:0] rom_out;
 
-reg [31:0] ROM [53:0];
+reg [31:0] ROM [511:0];
 // wire [31:0] base_addr;
 
 initial $readmemh("test.hex", ROM);

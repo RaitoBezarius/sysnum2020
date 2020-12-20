@@ -16,7 +16,8 @@ let
     };
   };
 in
-mkShell {
-  nativeBuildInputs = [ elf2hex ];
-}
+  mkShell {
+    name = "riscv-toolchain-shell";
+    nativeBuildInputs = [ elf2hex hostNixpkgs.symbiyosys ];
+  }
 
