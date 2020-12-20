@@ -145,7 +145,7 @@ A way to solve this is to use branch prediction, but it requires statistical str
 
 - [ ] Lay out the bare minimum in the CPU
 - [ ] 2-way associative simple read-write data cache
-- [ ] Formal verification using Symbiyosys
+- [ ] Formal verification using SymbiYosys
 - [ ] Connect it to the CPU
 
 ## MMU (Ryan)
