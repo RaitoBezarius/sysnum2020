@@ -30,14 +30,14 @@ output wire [2:0] o_wb_sel;
 output reg  [W-1:0] o_data;
 input  wire [W-1:0] i_data;
 
-output [31:0] rom_addr;
-input  [31:0] rom_in;
+output [W-1:0] rom_addr;
+input  [W-1:0] rom_in;
 
-output [31:0] fw_rom_addr;
+output [W-1:0] fw_rom_addr;
 input  [31:0] fw_rom_in;
 
 // Registers
-reg [31:0] registers [1:0][15:0];
+reg [W-1:0] registers [1:0][15:0];
 
 integer i;
 integer k;
@@ -49,7 +49,7 @@ initial begin
 end
 
 // Dual mode extra registers
-reg [31:0] extra_regs [255:0];
+reg [W-1:0] extra_regs [255:0];
 
 integer t;
 initial begin
@@ -565,6 +565,7 @@ always @(posedge clk) begin
 			wb_op <= WB_WRITE;
             
             if(mem_mode == NORMAL_MODE) begin
+              $strobe("[MEM] load at %d of %d", o_data_addr, i_data);
               wb_res <= i_data;
             end else begin // Dual mode
                 wb_res <= dual_data;
@@ -581,6 +582,7 @@ always @(posedge clk) begin
                 end else begin
                     o_data <= res;
                 end
+                $strobe("[MEM] store request at addr %d of %d", o_data_addr, res);
             end else if(mem_mode == DUAL_MODE) begin
                 // We store directly 32-bit words
                 if(mem_target[8] == 0) begin
@@ -602,7 +604,7 @@ always @(posedge clk) begin
             wb_op <= WB_TRAP;
             wb_res <= mem_inst;
         end
-		MEM_NOP    : wb_op <= WB_NOP;
+        MEM_NOP : wb_op <= WB_NOP;
 		MEM_ERR    : wb_op <= WB_ERR;
 	endcase
 end
@@ -610,7 +612,7 @@ end
 // WB block
 assign wb_triggers_write = (wb_op == WB_WRITE);
 assign wb_fwd = wb_res;
-wire [31:0] next_pc;
+wire [W-1:0] next_pc = pc + 4;
 
 assign kill = (wb_op == WB_JUMP || wb_op == WB_TRAP || wb_op == WB_ERR);
 assign next_pc =
@@ -625,7 +627,7 @@ always @(posedge clk) begin
             if_mode <= DUAL_MODE;
         end
         pc <= next_pc;
-    end else begin
+      end else begin
         if(wb_op == WB_TRAP) begin
             // In this case, a SYSTEM instruction was executed.
             // We go back to normal mode.
@@ -641,13 +643,13 @@ always @(posedge clk) begin
     end
 
 	if(wb_op == WB_JUMP) begin
-		$display("%d: jump to %d", $time, next_pc);
+		$strobe("%d: jump to %d", $time, next_pc);
 	end
 
 	case(wb_op)
 		WB_WRITE: begin
 			registers[id_mode][wb_rd] <= wb_res;
-			$display("%d: r%d <- %d", $time, wb_rd, wb_res);
+			$strobe("%d: r%d <- %d", $time, wb_rd, wb_res);
 		end
         WB_TRAP : begin
             // we already prepared pc and id_mode
@@ -660,12 +662,13 @@ always @(posedge clk) begin
         WB_NOP  : begin end // Nothing to do.
 		WB_ERR  : begin
 			// TODO: How to handle this properly ?
-			$display("%d: ERROR", $time);
+			$strobe("%d: ERROR", $time);
             
             if(id_mode == NORMAL_MODE) begin
                 registers[DUAL_MODE][1] <= next_pc;
             end
 		end
+    default: $strobe("Writeback phase: %d", wb_op);
 	endcase
 end
 

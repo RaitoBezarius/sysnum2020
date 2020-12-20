@@ -5,8 +5,18 @@
 
 module testbed();
 
-localparam XLEN = 32;
-localparam W = XLEN;
+// Default implementation.
+`ifndef XLEN
+`define XLEN 32
+`endif
+
+`ifndef N_TICKS
+`define N_TICKS 5000
+`endif
+
+
+localparam XLEN = `XLEN;
+localparam W = XLEN; // RAM width.
 
 // Clock
 
@@ -20,36 +30,11 @@ always begin
 	#1 clk <= ~clk;
 end
 
-// RAM (unused atm)
-
-wire [31:0] ram_read_addr;
-wire [31:0] ram_write_addr;
-wire        ram_write_enable;
-wire [31:0] ram_data_in;
-wire [31:0] ram_data_out;
-
-reg [31:0] RAM [31:0];
-
-assign ram_data_out = RAM[ram_read_addr];
-
-always @(posedge clk) begin
-    if (ram_write_enable) begin
-        RAM[ram_write_addr] <= ram_data_in;
-    end
-end
-
 // ROM
-
-wire [31:0] rom_addr;
-wire [31:0] rom_out;
-
-reg [31:0] ROM [511:0];
-// wire [31:0] base_addr;
-
+wire [W-1:0] rom_addr, rom_out;
+reg [W-1:0] ROM [511:0];
 initial $readmemh("test.hex", ROM);
-
 assign rom_out = ROM[rom_addr];
-
 always @(posedge clk) begin
     if(rom_addr[1:0] != 2'b00) begin
 		$display("Misaligned ROM address !");
@@ -58,18 +43,15 @@ always @(posedge clk) begin
 end
 
 // Firmware ROM
-// TODO: Make it as small as possible !
+// TODO(Julien): Make it as small as possible !
+// Answer(Ryan): indeed, it has 2 32-bits entries. :>
+// TODO(Ryan, will never be implemented): an interesting way to have small
+// core is E extension.
 
-wire [31:0] fw_rom_addr;
-wire [31:0] fw_rom_out;
-
-reg [31:0] FW_ROM [2:0];
-// wire [31:0] fw_base_addr;
-
+wire [W-1:0] fw_rom_addr, fw_rom_out;
+reg [W-1:0] FW_ROM [2:0];
 initial $readmemh("firmware.hex", FW_ROM);
-
 assign fw_rom_out = FW_ROM[fw_rom_addr];
-
 always @(posedge clk) begin
 	if(fw_rom_addr[1:0] != 2'b00) begin
         $display("Misaligned firmware ROM address !");
@@ -77,12 +59,15 @@ always @(posedge clk) begin
 	end
 end
 
+// B-RAM on FPGA. Will be useful for L1d.
 wire [W-1:0] bram_i_addr, bram_i_data, bram_o_data;
 wire bram_we, bram_stall, bram_ack;
 wire [2:0] bram_sel;
 
 // A FPGA Block RAM.
-block_ram ram(
+block_ram #(
+  .XLEN(XLEN)
+) ram(
   .i_clk(clk),
   .i_reset(reset),
   .i_wb_stb(),
@@ -97,8 +82,10 @@ block_ram ram(
   .o_wb_ack(bram_ack)
 );
 
-// Processor
-riscv soc(
+// RISC-V hart
+riscv #(
+  .XLEN(XLEN)
+) hart(
 	.clk(clk),
 
   .i_data(bram_o_data),
@@ -114,13 +101,12 @@ riscv soc(
   .fw_rom_in(fw_rom_out)
 );
 
-// Simulation setup
-
+// Simulation tracing and run.
 initial begin
-        $display("Simulation starts now and finish in 5000 ticks.");
-        $dumpfile("test.vcd");
+        $display("Simulation starts now and finish in %d ticks.", `N_TICKS);
+        $dumpfile("trace.vcd");
         $dumpvars(0, testbed);
-        #10000 $finish;
+        #`N_TICKS $finish;
 end
 
 endmodule

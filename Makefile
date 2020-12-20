@@ -7,7 +7,7 @@ RISCV-ELF2HEX = riscv32-none-elf-elf2hex
 
 # Simulation
 VERILOG-CC = iverilog
-VERILOG-FLAGS = -g2012 -Isrc/rtl
+VERILOG-FLAGS = -g2012 -Isrc/rtl -DN_TICKS=$(SIMULATION_N_TICKS) -DXLEN=$(XLEN)
 
 SIMULATOR = vvp
 SIMULATOR-FLAGS = -lxt2 # Compact VCD traces.
@@ -15,7 +15,7 @@ SIMULATOR-FLAGS = -lxt2 # Compact VCD traces.
 # Flags
 ELF2HEX-FLAGS = --bit-width $(XLEN)
 RISCV-AS-FLAGS = 
-RISCV-CC-FLAGS = -march=$(RISCV-ARCH) -mabi=$(RISCV-ABI) -ffreestanding -nolibc -nostdlib -Wl,-T,$(RISCV-LINKER-SCRIPT) $(RISCV-CRT0)
+RISCV-CC-FLAGS = -march=$(RISCV-ARCH) -mabi=$(RISCV-ABI) -mcmodel=medany -fvisibility=hidden -nostartfiles -nostdlib -Wl,-T,$(RISCV-LINKER-SCRIPT) $(RISCV-CRT0)
 
 
 # Softcore configuration
@@ -28,6 +28,7 @@ DUAL_MODE_FIRMWARE_SRC = src/firmware/firmware.s
 
 # Simulation/FPGA configuration
 TEST_PROGRAM_SRC = src/software/test.c
+SIMULATION_N_TICKS = 100
 
 TESTBED_SOURCE = src/rtl/testbed.sv
 TESTBED_EXECUTABLE = simulation.vvp
