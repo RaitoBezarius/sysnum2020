@@ -54,23 +54,29 @@ template<class Module> class Testbench {
         }
     }
 
+    virtual void postEval(vluint64_t cur_tick) {
+    }
+
     virtual void tick() {
         (*main_time)++;
         vluint64_t cur_tick = *main_time;
 
         mCore->clk = 0;
         mCore->eval();
+        this->postEval(cur_tick);
 
         if (shouldTrace) mTrace->dump(10*cur_tick - 2);
 
         mCore->clk = 1;
         mCore->eval();
+        this->postEval(cur_tick);
 
         if (shouldTrace) mTrace->dump(10*cur_tick);
 
         // Negative edge.
         mCore->clk = 0;
         mCore->eval();
+        this->postEval(cur_tick);
 
         if (shouldTrace) {
             mTrace->dump(10*cur_tick + 5);
