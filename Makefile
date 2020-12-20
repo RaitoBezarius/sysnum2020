@@ -7,11 +7,13 @@ RISCV-OBJDUMP = riscv32-none-elf-objdump
 RISCV-ELF2HEX = riscv32-none-elf-elf2hex
 
 # Simulation
-VERILOG-CC = iverilog
-VERILOG-FLAGS = -g2012 -Isrc/rtl -DN_TICKS=$(SIMULATION_N_TICKS) -DXLEN=$(XLEN)
+VERILOG-CC = verilator
+VERILOG-FLAGS = --cc -MMD -Isrc/rtl -Wno-fatal --build --exe -DN_TICKS=$(SIMULATION_N_TICKS) -DXLEN=$(XLEN) --Mdir $(VERILOG_GENERATED) --trace
+VERILOG_GENERATED = _vgenerated
+VERILOG_MAKEFILE = Vtestbed.mk
 
-SIMULATOR = vvp
-SIMULATOR-FLAGS = -lxt2 # Compact VCD traces.
+SIMULATOR =
+SIMULATOR-FLAGS = +nticks+$(SIMULATION_N_TICKS)
 
 # Flags
 ELF2HEX-FLAGS = --bit-width $(XLEN)
@@ -29,10 +31,11 @@ DUAL_MODE_FIRMWARE_SRC = src/firmware/firmware.s
 
 # Simulation/FPGA configuration
 TEST_PROGRAM_SRC = src/software/test.c
-SIMULATION_N_TICKS = 500
+SIMULATION_N_TICKS = 5000
 
 TESTBED_SOURCE = src/rtl/testbed.sv
-TESTBED_EXECUTABLE = simulation.vvp
+TESTBED_SIM_SOURCE = src/rtl/sim/testbed.cpp
+TESTBED_EXECUTABLE = simulation
 
 # Build configuration
 BUILDDIR = build

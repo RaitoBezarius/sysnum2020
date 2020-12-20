@@ -3,31 +3,24 @@
 
 `include "core/hart.sv"
 
-module testbed(clk, reset);
+module compliancebed(clk, reset, rom_addr, rom_out);
 
 // Default implementation.
 `ifndef XLEN
 `define XLEN 32
 `endif
 
-`ifndef N_TICKS
-`define N_TICKS 5000
-`endif
-
-
 localparam XLEN = `XLEN;
 localparam W = XLEN; // RAM width.
 
 // Clock
 
-input reg clk;
-input reg reset;
+input wire clk;
+input wire reset;
+output wire rom_addr;
+input wire rom_out;
 
 // ROM
-wire [W-1:0] rom_addr, rom_out;
-reg [W-1:0] ROM [511:0];
-initial $readmemh("test.hex", ROM);
-assign rom_out = ROM[rom_addr >> 2];
 always @(posedge clk) begin
     if(rom_addr[1:0] != 2'b00) begin
 		$display("Misaligned ROM address !");
@@ -94,11 +87,6 @@ hart #(
   .fw_rom_addr(fw_rom_addr),
   .fw_rom_in(fw_rom_out)
 );
-
-// Simulation tracing and run.
-initial begin
-        $display("Simulation starts now and finish in %d ticks.", `N_TICKS);
-end
 
 endmodule
 

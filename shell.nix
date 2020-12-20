@@ -18,6 +18,6 @@ let
 in
   mkShell {
     name = "riscv-toolchain-shell";
-    nativeBuildInputs = [ elf2hex hostNixpkgs.symbiyosys ];
+    nativeBuildInputs = [ elf2hex hostNixpkgs.symbiyosys hostNixpkgs.verilator ];
   }
 
