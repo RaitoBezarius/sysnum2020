@@ -13,7 +13,7 @@ VERILOG_GENERATED = _vgenerated
 VERILOG_MAKEFILE = Vtestbed.mk
 
 SIMULATOR =
-SIMULATOR-FLAGS =
+SIMULATOR-FLAGS = +nticks+$(SIMULATION_N_TICKS)
 
 # Flags
 ELF2HEX-FLAGS = --bit-width $(XLEN)
@@ -31,7 +31,7 @@ DUAL_MODE_FIRMWARE_SRC = src/firmware/firmware.s
 
 # Simulation/FPGA configuration
 TEST_PROGRAM_SRC = src/software/test.c
-SIMULATION_N_TICKS = 1000
+SIMULATION_N_TICKS = 5000
 
 TESTBED_SOURCE = src/rtl/testbed.sv
 TESTBED_SIM_SOURCE = src/rtl/sim/testbed.cpp
