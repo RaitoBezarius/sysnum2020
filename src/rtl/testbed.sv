@@ -1,9 +1,9 @@
 
 `default_nettype none
 
-`include "core/core.sv"
+`include "core/hart.sv"
 
-module testbed();
+module testbed(clk, reset);
 
 // Default implementation.
 `ifndef XLEN
@@ -20,15 +20,8 @@ localparam W = XLEN; // RAM width.
 
 // Clock
 
-reg clk;
-reg reset;
-
-initial clk = 1;
-initial reset = 0;
-
-always begin
-	#1 clk <= ~clk;
-end
+input reg clk;
+input reg reset;
 
 // ROM
 wire [W-1:0] rom_addr, rom_out;
@@ -67,7 +60,7 @@ wire [2:0] bram_sel;
 // A FPGA Block RAM.
 block_ram #(
   .XLEN(XLEN)
-) ram(
+) bram(
   .i_clk(clk),
   .i_reset(reset),
   .i_wb_stb(bram_stb),
@@ -83,9 +76,9 @@ block_ram #(
 );
 
 // RISC-V hart
-riscv #(
+hart #(
   .XLEN(XLEN)
-) hart(
+) hart0(
 	.clk(clk),
 
   .i_data(bram_o_data),
