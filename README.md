@@ -135,8 +135,8 @@ A way to solve this is to use branch prediction, but it requires statistical str
 ## RISC-V compliance testsuite & Verilator (Ryan & Julien)
 
 - [x] Submodule for RISC-V compliance testsuite
-- [ ] Write the test harness with our own Makefile
-- [ ] Move to Verilator
+- [x] Write the test harness with our own Makefile
+- [x] Move to Verilator
 - [ ] Write a simulation model to test our CPU with Verilator
 - [ ] Report the results of the compliance testsuite
 - [ ] Put it in GitHub Actions CI
