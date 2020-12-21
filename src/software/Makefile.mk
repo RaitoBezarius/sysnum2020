@@ -3,7 +3,7 @@ sp := $(sp).x
 dirstack_$(sp) := $(d)
 d := $(dir)
 
-SOURCES_$(d) = $(shell find . -type f -name '*.c')
+SOURCES_$(d) = $(shell find $(d) -type f -name '*.c')
 
 TEST_PROGRAM_ELF = test.elf
 TEST_PROGRAM = test.hex
