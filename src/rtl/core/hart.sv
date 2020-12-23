@@ -617,7 +617,7 @@ assign next_pc =
     (wb_op == WB_JUMP) ? wb_res :
     (wb_op == WB_TRAP) ? 4 :
     (wb_op == WB_ERR ) ? 0 :
-    wb_pc + 4;
+    pc + 4;
 
 always @(posedge clk) begin
     if(id_mode == NORMAL_MODE) begin
