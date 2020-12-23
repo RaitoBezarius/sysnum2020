@@ -1,0 +1,24 @@
+[tasks]
+bram bmc
+bram prove
+
+[options]
+bmc: 
+mode bmc
+depth 100
+prove:
+mode prove
+
+[engines]
+bmc: smtbmc boolector
+prove: abc pdr
+
+[script]
+bram: 
+read -sv block_ram.sv
+hierarchy -top block_ram
+chparam -set LGMEMSZ 3
+prep -top block_ram
+
+[files]
+memory/block_ram.sv

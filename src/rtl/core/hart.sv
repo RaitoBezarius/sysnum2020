@@ -24,7 +24,7 @@ input clk;
 
 output [W-1:0] o_data_addr;
 output o_wb_we, o_wb_stb;
-output [2:0] o_wb_sel;
+output [3:0] o_wb_sel;
 output [W-1:0] o_data;
 input  [W-1:0] i_data;
 
@@ -123,7 +123,7 @@ wire [ 4:0] exe_op;
 reg  [ 4:0] exe_rd;
 reg  [31:0] exe_pc;
 reg  [31:0] exe_inst;
-reg  [11:0] exe_offset;
+reg  [31:0] exe_offset;
 reg  [ 2:0] exe_mem_data_ty;
 
 parameter EXE_ADD   = 5'b00000;
@@ -153,11 +153,11 @@ parameter EXE_TRAP  = 5'b10010;
 parameter EXE_NOP   = 5'b10011;
 parameter EXE_ERR   = 5'b10011;
 
-parameter DATA_B  = 3'b000;
-parameter DATA_H  = 3'b001;
-parameter DATA_W  = 3'b010;
-parameter DATA_BU = 3'b100;
-parameter DATA_HU = 3'b101;
+parameter DATA_B  = 3'b000; // Byte.
+parameter DATA_H  = 3'b001; // Half word: Sign-extends.
+parameter DATA_W  = 3'b010; // Word: Sign-extends.
+parameter DATA_BU = 3'b100; // Byte: Zero-extends.
+parameter DATA_HU = 3'b101; // Half word: Zero-extends.
 
 assign exe_op = kill ? EXE_NOP : exe_op_request;
 
@@ -174,7 +174,7 @@ parameter MEM_FORWARD = 3'b000;
 parameter MEM_JUMP    = 3'b001;
 parameter MEM_LOAD    = 3'b010;
 parameter MEM_STORE   = 3'b011;
-parameter MEM_TRAP    = 5'b100;
+parameter MEM_TRAP    = 3'b100;
 parameter MEM_NOP     = 3'b101;
 parameter MEM_ERR     = 3'b110;
 
@@ -240,7 +240,7 @@ wire [4:0] rd;
 wire [4:0] rs1;
 wire [4:0] rs2;
 wire [2:0] func3;
-wire [2:0] func7;
+wire [6:0] func7;
 
 wire [31:0] rs1_val;
 wire [31:0] rs2_val;
@@ -254,7 +254,7 @@ assign rd    = instruction[11:7 ];
 assign func3 = instruction[14:12];
 assign func7 = instruction[31:25];
 
-wire [1:0] branch_inst;
+wire [4:0] branch_inst;
 wire reverse_operands;
 
 assign alu_op =
@@ -449,8 +449,8 @@ assign shift_amount = exe_op_2[4:0];
 assign exe_res =
 	exe_op == EXE_ADD  ? (exe_op_1 + exe_op_2) :
 	exe_op == EXE_SUB  ? (exe_op_1 - exe_op_2) :
-	exe_op == EXE_SLT  ? ($signed(exe_op_1) < $signed(exe_op_2)) :
-	exe_op == EXE_SLTU ? (exe_op_1 < exe_op_2) :
+	exe_op == EXE_SLT  ? ({31'b0, $signed(exe_op_1) < $signed(exe_op_2)}) :
+	exe_op == EXE_SLTU ? ({31'b0, exe_op_1 < exe_op_2}) :
 	exe_op == EXE_AND  ? (exe_op_1 & exe_op_2) :
 	exe_op == EXE_OR   ? (exe_op_1 | exe_op_2) :
 	exe_op == EXE_XOR  ? (exe_op_1 ^ exe_op_2) :
@@ -527,14 +527,20 @@ assign mem_fwd = mem_op == MEM_FORWARD ? res :
     mem_mode == NORMAL_MODE ? i_data :
     dual_data;
 
-assign o_wb_sel = mem_data_ty;
+assign o_wb_sel = (mem_data_ty == DATA_B) ? 4'b0001 :
+  ((mem_data_ty == DATA_H) ? 4'b0011 :
+  ((mem_data_ty == DATA_BU) ? 4'b0001 :
+  ((mem_data_ty == DATA_HU) ? 4'b0011 :
+  4'b1111)));
 assign o_data_addr = mem_target;
 assign o_wb_we = (mem_mode == NORMAL_MODE && mem_op == MEM_STORE);
 assign o_wb_stb = (mem_mode == NORMAL_MODE && (mem_op == MEM_STORE || mem_op == MEM_LOAD)); // Initiate an operation
 assign o_data = (mem_mode == NORMAL_MODE) ? 
-  ((mem_data_ty == DATA_B) ? {24'b0, res[7:0]} :
-  ((mem_data_ty == DATA_H) ? {16'b0, res[15:0]} :
-  res)) : o_data;
+  ((mem_data_ty == DATA_B) ? 32'(signed'(res[7:0])) :
+  ((mem_data_ty == DATA_H) ? 32'(signed'(res[15:0])) :
+  ((mem_data_ty == DATA_BU) ? {24'b0, res[7:0]} :
+  ((mem_data_ty == DATA_HU) ? {16'b0, res[15:0]} :
+  res)))) : 32'b0; // Garbage as, in dual mode, we are not doing RAM tx.
 
 
 wire [31:0] dual_data;

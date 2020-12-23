@@ -55,7 +55,7 @@ end
 // B-RAM on FPGA. Will be useful for L1d.
 wire [W-1:0] bram_i_addr, bram_i_data, bram_o_data;
 wire bram_we, bram_stall, bram_ack, bram_stb;
-wire [2:0] bram_sel;
+wire [3:0] bram_sel;
 
 // A FPGA Block RAM.
 block_ram #(

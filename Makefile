@@ -8,7 +8,7 @@ RISCV-ELF2HEX = riscv32-none-elf-elf2hex
 
 # Simulation
 VERILOG-CC = verilator
-VERILOG-FLAGS = --cc -MMD -Isrc/rtl -Wno-fatal --build --exe -DN_TICKS=$(SIMULATION_N_TICKS) -DXLEN=$(XLEN) --Mdir $(VERILOG_GENERATED) --trace
+VERILOG-FLAGS = -Wall --cc -MMD -Isrc/rtl -Wno-fatal --build --exe -DN_TICKS=$(SIMULATION_N_TICKS) -DXLEN=$(XLEN) --Mdir $(VERILOG_GENERATED) --trace
 VERILOG_GENERATED = _vgenerated
 VERILOG_MAKEFILE = Vtestbed.mk
 
