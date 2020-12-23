@@ -12,6 +12,8 @@ module hart
   o_wb_sel,
   o_wb_stb,
   i_data,
+  i_data_ack,
+  i_data_stall,
   o_data,
   o_data_addr,
 	rom_addr,
@@ -27,6 +29,7 @@ output o_wb_we, o_wb_stb;
 output [3:0] o_wb_sel;
 output [W-1:0] o_data;
 input  [W-1:0] i_data;
+input i_data_ack, i_data_stall;
 
 output [W-1:0] rom_addr;
 input  [W-1:0] rom_in;
@@ -94,12 +97,15 @@ assign exe_op_2 =
 	( wb_triggers_write &&  wb_rd == fwd_rs2) ? wb_fwd  :
 	op_2;
 
-// Stalling signal
+// Signals
+wire mem_stall; // Written by MEM block.
 wire kill; // Written by the WB block.
 
 // IF interface
-reg  [0:0] if_mode = NORMAL_MODE;
-wire [0:0] if_op = kill ? IF_NOP : IF_FETCH;
+reg  [ 0:0] if_mode = NORMAL_MODE;
+wire [ 0:0] if_op = kill ? IF_NOP : IF_FETCH;
+reg  [31:0] if_pc_request;
+reg  [ 0:0] if_prediction_failed;
 
 parameter IF_FETCH = 1'b0;
 parameter IF_NOP   = 1'b1;
@@ -196,23 +202,28 @@ parameter WB_NOP   = 3'b011;
 parameter WB_ERR   = 3'b110;
 
 // IF block
-reg [31:0] pc = 0;
+reg  [31:0] pc = 0;
+wire [31:0] if_new_pc;
 
-assign rom_addr = pc;
-assign fw_rom_addr = pc;
+assign if_new_pc = if_prediction_failed ? if_pc_request : pc + 4;
+assign rom_addr = if_new_pc;
+assign fw_rom_addr = if_new_pc;
 
 always @(posedge clk) begin
-    case(if_op)
-        IF_FETCH: begin
-            id_mode <= if_mode;
-            instruction <= if_mode == DUAL_MODE ? fw_rom_in : rom_in;
-            id_op_request <= ID_DECODE;
-            id_pc <= pc;
-        end
-        IF_NOP: begin
-            id_op_request <= ID_NOP; 
-        end
-    endcase
+    if(!mem_stall) begin
+        case(if_op)
+            IF_FETCH: begin
+                id_mode <= if_mode;
+                instruction <= if_mode == DUAL_MODE ? fw_rom_in : rom_in;
+                id_op_request <= ID_DECODE;
+                id_pc <= if_new_pc;
+                pc <= if_new_pc;
+            end
+            IF_NOP: begin
+                id_op_request <= ID_NOP; 
+            end
+        endcase
+    end
 end
 
 // ID block
@@ -288,149 +299,151 @@ assign rs1_val = (wb_rd == rs1 && wb_triggers_write) ? wb_res : registers[if_mod
 assign rs2_val = (wb_rd == rs2 && wb_triggers_write) ? wb_res : registers[if_mode][rs2];
 
 always @(posedge clk) begin
-	case(id_op)
-		ID_DECODE: begin
-            exe_mode        <= id_mode;
-            exe_rd          <= rd;
-            exe_pc          <= id_pc;
-            exe_inst        <= instruction;
-            exe_mem_data_ty <= func3;
+    if(!mem_stall) begin
+        case(id_op)
+            ID_DECODE: begin
+                exe_mode        <= id_mode;
+                exe_rd          <= rd;
+                exe_pc          <= id_pc;
+                exe_inst        <= instruction;
+                exe_mem_data_ty <= func3;
 
-			if(instruction[1:0] == 2'b11) begin
-				case(instruction[6:2])
-					OP_IMM: begin
-						if(
-							alu_op == EXE_ADD &&
-							rd == 0 && rs1 == 0 &&
-							instruction[31:20] == 0
-						) begin
-							exe_op_request <= EXE_NOP;
-						end else begin
-							op_type = TYPE_I;
-							exe_op_request <= alu_op;
-						end
-					end
-					LUI: begin
-						op_type = TYPE_U;
-						exe_op_request <= EXE_LUI;
-					end
-					AUIPC: begin
-						op_type = TYPE_U;
-						exe_op_request <= EXE_ADD;
+                if(instruction[1:0] == 2'b11) begin
+                    case(instruction[6:2])
+                        OP_IMM: begin
+                            if(
+                                alu_op == EXE_ADD &&
+                                rd == 0 && rs1 == 0 &&
+                                instruction[31:20] == 0
+                            ) begin
+                                exe_op_request <= EXE_NOP;
+                            end else begin
+                                op_type = TYPE_I;
+                                exe_op_request <= alu_op;
+                            end
+                        end
+                        LUI: begin
+                            op_type = TYPE_U;
+                            exe_op_request <= EXE_LUI;
+                        end
+                        AUIPC: begin
+                            op_type = TYPE_U;
+                            exe_op_request <= EXE_ADD;
 
-						op_2 <= id_pc;
-					end
-					OP: begin
-						op_type = TYPE_R;
-						exe_op_request <= alu_op;
-					end
-					JAL: begin
-						op_type = TYPE_J;
-						exe_op_request <= EXE_JUMP;
-					end
-					JALR: begin
-						if(func3 == 0) begin
-							op_type = TYPE_I;
-							exe_op_request <= EXE_JUMP;
-						end else begin
-							$display("Error");
-						end
-					end
-					BRANCH: begin
-						exe_op_request <= branch_inst;
-					end
-					LOAD: begin
-						op_type = TYPE_I;
-						exe_op_request <= EXE_LOAD;
-					end
-					STORE: begin
-						op_type = TYPE_S;
-						exe_op_request <= EXE_STORE;
-					end
-                    SYSTEM: begin
-                        exe_op_request <= EXE_TRAP;
+                            op_2 <= id_pc;
+                        end
+                        OP: begin
+                            op_type = TYPE_R;
+                            exe_op_request <= alu_op;
+                        end
+                        JAL: begin
+                            op_type = TYPE_J;
+                            exe_op_request <= EXE_JUMP;
+                        end
+                        JALR: begin
+                            if(func3 == 0) begin
+                                op_type = TYPE_I;
+                                exe_op_request <= EXE_JUMP;
+                            end else begin
+                                $display("Error");
+                            end
+                        end
+                        BRANCH: begin
+                            exe_op_request <= branch_inst;
+                        end
+                        LOAD: begin
+                            op_type = TYPE_I;
+                            exe_op_request <= EXE_LOAD;
+                        end
+                        STORE: begin
+                            op_type = TYPE_S;
+                            exe_op_request <= EXE_STORE;
+                        end
+                        SYSTEM: begin
+                            exe_op_request <= EXE_TRAP;
+                        end
+                        default: exe_op_request <= EXE_ERR;
+                    endcase
+                end else begin
+                    exe_op_request <= EXE_ERR;
+                end
+
+                case(op_type)
+                    TYPE_R: begin
+                        op_1 <= rs1_val;
+                        op_2 <= rs2_val;
+                        fwd_rs1 <= rs1;
+                        fwd_rs2 <= rs2;
                     end
-					default: exe_op_request <= EXE_ERR;
-				endcase
-			end else begin
-				exe_op_request <= EXE_ERR;
-			end
+                    TYPE_I: begin
+                        op_1 <= registers[id_mode][rs1];
+                        op_2 <= {
+                            {21{instruction[31]}},
+                            instruction[30:20]
+                        };
+                        fwd_rs1 <= rs1;
+                        fwd_rs2 <= 0;
+                    end
+                    TYPE_S: begin
+                        op_1 <= registers[id_mode][rs1];
+                        op_2 <= registers[id_mode][rs2];
+                        fwd_rs1 <= rs1;
+                        fwd_rs2 <= rs2;
+                        exe_offset <= {
+                            {21{instruction[31]}},
+                            instruction[30:25],
+                            instruction[11:8],
+                            instruction[7]
+                        };
+                    end
+                    TYPE_B: begin
+                        if(reverse_operands) begin
+                            op_1 <= registers[id_mode][rs2];
+                            op_2 <= registers[id_mode][rs1];
+                            fwd_rs1 <= rs2;
+                            fwd_rs2 <= rs1;
+                        end else begin
+                            op_1 <= registers[id_mode][rs1];
+                            op_2 <= registers[id_mode][rs2];
+                            fwd_rs1 <= rs1;
+                            fwd_rs2 <= rs2;
+                        end
 
-			case(op_type)
-				TYPE_R: begin
-					op_1 <= rs1_val;
-					op_2 <= rs2_val;
-					fwd_rs1 <= rs1;
-					fwd_rs2 <= rs2;
-				end
-				TYPE_I: begin
-					op_1 <= registers[id_mode][rs1];
-					op_2 <= {
-						{21{instruction[31]}},
-						instruction[30:20]
-					};
-					fwd_rs1 <= rs1;
-					fwd_rs2 <= 0;
-				end
-				TYPE_S: begin
-					op_1 <= registers[id_mode][rs1];
-					op_2 <= registers[id_mode][rs2];
-					fwd_rs1 <= rs1;
-					fwd_rs2 <= rs2;
-					exe_offset <= {
-						{21{instruction[31]}},
-						instruction[30:25],
-						instruction[11:8],
-						instruction[7]
-					};
-				end
-				TYPE_B: begin
-					if(reverse_operands) begin
-						op_1 <= registers[id_mode][rs2];
-						op_2 <= registers[id_mode][rs1];
-						fwd_rs1 <= rs2;
-						fwd_rs2 <= rs1;
-					end else begin
-						op_1 <= registers[id_mode][rs1];
-						op_2 <= registers[id_mode][rs2];
-						fwd_rs1 <= rs1;
-						fwd_rs2 <= rs2;
-					end
-
-					// exe_pc is already set.
-					exe_offset <= {
-						{20{instruction[31]}},
-						instruction[7],
-						instruction[30:25],
-						instruction[11:8],
-						1'b0
-					};
-				end
-				TYPE_U: begin
-					op_1 <= {instruction[31:12], 12'b0};
-					// If op_2 is needed, it has already been set.
-					fwd_rs1 <= rs1;
-					fwd_rs2 <= rs2;
-				end
-				TYPE_J: begin
-					op_1 <= id_pc;
-					op_2 <= {{
-						12{instruction[31]}},
-						instruction[19:12],
-						instruction[20],
-						instruction[30:21],
-						1'b0
-					};
-					fwd_rs1 <= 0;
-					fwd_rs2 <= 0;
-				end
-				// default: we don't need to decode anything.
-			endcase
-		end
-		ID_NOP: begin
-			exe_op_request <= EXE_NOP;
-		end
-	endcase
+                        // exe_pc is already set.
+                        exe_offset <= {
+                            {20{instruction[31]}},
+                            instruction[7],
+                            instruction[30:25],
+                            instruction[11:8],
+                            1'b0
+                        };
+                    end
+                    TYPE_U: begin
+                        op_1 <= {instruction[31:12], 12'b0};
+                        // If op_2 is needed, it has already been set.
+                        fwd_rs1 <= rs1;
+                        fwd_rs2 <= rs2;
+                    end
+                    TYPE_J: begin
+                        op_1 <= id_pc;
+                        op_2 <= {{
+                            12{instruction[31]}},
+                            instruction[19:12],
+                            instruction[20],
+                            instruction[30:21],
+                            1'b0
+                        };
+                        fwd_rs1 <= 0;
+                        fwd_rs2 <= 0;
+                    end
+                    // default: we don't need to decode anything.
+                endcase
+            end
+            ID_NOP: begin
+                exe_op_request <= EXE_NOP;
+            end
+        endcase
+    end
 end
 
 // EXE block
@@ -469,59 +482,67 @@ assign cond_pass =
 	0;
 
 always @(posedge clk) begin
-    mem_rd      <= exe_rd;
-    mem_data_ty <= exe_mem_data_ty;
+    if(!mem_stall) begin
+        mem_rd      <= exe_rd;
+        mem_data_ty <= exe_mem_data_ty;
 
-    if(exe_op != EXE_NOP) begin
-        mem_mode <= exe_mode;
-        mem_pc   <= exe_pc;
-        mem_inst <= exe_inst;
-    end
-
-	case(exe_op)
-		EXE_JUMP: begin
-			mem_op_request <= MEM_JUMP;
-			mem_target <= exe_res;
-		end
-		EXE_BEQ, EXE_BNE, EXE_BLT, EXE_BLTU: begin
-			if(cond_pass) begin
-				mem_op_request <= MEM_JUMP;
-				mem_target <= exe_pc + exe_offset;
-			end else begin
-				mem_op_request <= MEM_NOP;
-			end
-		end
-
-		EXE_LUI: begin
-			mem_op_request <= MEM_FORWARD;
-			res <= exe_op_1;
-		end
-
-		EXE_LOAD: begin
-			mem_op_request <= MEM_LOAD;
-			mem_target <= exe_op_1 + exe_offset;
-		end
-		EXE_STORE: begin
-			mem_op_request <= MEM_STORE;
-			mem_target <= exe_op_1 + exe_offset;
-			res <= exe_op_2;
-		end
-
-        EXE_TRAP: begin
-            mem_op_request <= MEM_TRAP;
+        if(exe_op != EXE_NOP) begin
+            mem_mode <= exe_mode;
+            mem_pc   <= exe_pc;
+            mem_inst <= exe_inst;
         end
 
-		EXE_NOP: mem_op_request <= MEM_NOP;
-		EXE_ERR: mem_op_request <= MEM_ERR;
+        case(exe_op)
+            EXE_JUMP: begin
+                mem_op_request <= MEM_JUMP;
+                mem_target <= exe_res;
+            end
+            EXE_BEQ, EXE_BNE, EXE_BLT, EXE_BLTU: begin
+                if(cond_pass) begin
+                    mem_op_request <= MEM_JUMP;
+                    mem_target <= exe_pc + exe_offset;
+                end else begin
+                    mem_op_request <= MEM_NOP;
+                end
+            end
 
-		default: begin
-			mem_op_request <= MEM_FORWARD;
-			res <= exe_res;
-		end
-	endcase
+            EXE_LUI: begin
+                mem_op_request <= MEM_FORWARD;
+                res <= exe_op_1;
+            end
+
+            EXE_LOAD: begin
+                mem_op_request <= MEM_LOAD;
+                mem_target <= exe_op_1 + exe_offset;
+            end
+            EXE_STORE: begin
+                mem_op_request <= MEM_STORE;
+                mem_target <= exe_op_1 + exe_offset;
+                res <= exe_op_2;
+            end
+
+            EXE_TRAP: begin
+                mem_op_request <= MEM_TRAP;
+            end
+
+            EXE_NOP: mem_op_request <= MEM_NOP;
+            EXE_ERR: mem_op_request <= MEM_ERR;
+
+            default: begin
+                mem_op_request <= MEM_FORWARD;
+                res <= exe_res;
+            end
+        endcase
+    end
 end
 
 // MEM block
+reg [0:0] mem_state;
+parameter STATE_NORMAL  = 1'b0;
+parameter STATE_WAITING = 1'b1;
+
+assign mem_stall = mem_op == MEM_LOAD || mem_state == STATE_WAITING;
+
 assign mem_triggers_write = (mem_op == MEM_FORWARD || mem_op == MEM_LOAD);
 assign mem_fwd = mem_op == MEM_FORWARD ? res :
     mem_mode == NORMAL_MODE ? i_data :
@@ -534,7 +555,7 @@ assign o_wb_sel = (mem_data_ty == DATA_B) ? 4'b0001 :
   4'b1111)));
 assign o_data_addr = mem_target;
 assign o_wb_we = (mem_mode == NORMAL_MODE && mem_op == MEM_STORE);
-assign o_wb_stb = (mem_mode == NORMAL_MODE && (mem_op == MEM_STORE || mem_op == MEM_LOAD)); // Initiate an operation
+assign o_wb_stb = mem_state == STATE_NORMAL && (mem_mode == NORMAL_MODE && (mem_op == MEM_STORE || mem_op == MEM_LOAD)); // Initiate an operation
 assign o_data = (mem_mode == NORMAL_MODE) ? 
   ((mem_data_ty == DATA_B) ? 32'(signed'(res[7:0])) :
   ((mem_data_ty == DATA_H) ? 32'(signed'(res[15:0])) :
@@ -553,58 +574,71 @@ assign dual_data = mem_target[8] == 0 ?
 // end
 
 always @(posedge clk) begin
-    wb_rd  <= mem_rd;
-    if(mem_op != MEM_NOP) begin
-        wb_mode <= mem_mode;
-        wb_pc   <= mem_pc;
-        wb_inst <= mem_inst;
-        wb_trap_tgt_addr <= res;
-    end
+    case(mem_state)
+        STATE_NORMAL: begin
+            wb_rd  <= mem_rd;
+            if(mem_op != MEM_NOP) begin
+                wb_mode <= mem_mode;
+                wb_pc   <= mem_pc;
+                wb_inst <= mem_inst;
+                wb_trap_tgt_addr <= res;
+            end
 
-	case(mem_op)
-		MEM_FORWARD: begin
-			wb_op <= WB_WRITE;
-			wb_res <= res;
-		end
-		MEM_JUMP   : begin
-			wb_op <= WB_JUMP;
-			wb_res <= mem_target;
-		end
-		MEM_LOAD   : begin
-			wb_op <= WB_WRITE;
-      if(mem_mode == NORMAL_MODE) begin
-        wb_res <= i_data;
-      end else begin // Dual mode
-          wb_res <= dual_data;
-      end
-		end
-		MEM_STORE  : begin
-			wb_op <= WB_NOP;
-        
-      if(mem_mode == DUAL_MODE) begin
-          // We store directly 32-bit words
-          if(mem_target[8] == 0) begin
-              /*if(mem_target[5] == 0) begin
-                  if(mem_target[0] == 0) begin
-                      
-                  end else begin
+            case(mem_op)
+                MEM_FORWARD: begin
+                    wb_op <= WB_WRITE;
+                    wb_res <= res;
+                end
+                MEM_JUMP   : begin
+                    wb_op <= WB_JUMP;
+                    wb_res <= mem_target;
+                end
+                MEM_LOAD   : begin
+                    if(mem_mode == NORMAL_MODE) begin
+                        wb_op <= WB_NOP;
+                        mem_state <= STATE_WAITING;
+                        mem_op_request <= MEM_NOP;
+                    end else begin // Dual mode
+                        wb_op <= WB_WRITE;
+                        wb_res <= dual_data;
+                    end
+                end
+                MEM_STORE  : begin
+                    wb_op <= WB_NOP;
+                    
+                    if(mem_mode == DUAL_MODE) begin
+                        // We store directly 32-bit words
+                        if(mem_target[8] == 0) begin
+                            /*if(mem_target[5] == 0) begin
+                                if(mem_target[0] == 0) begin
+                                  
+                                end else begin
 
-                  end
-              end else begin*/
-                  registers[NORMAL_MODE][mem_target[4:0]] <= res;
-              //end
-          end else begin
-              extra_regs[mem_target[7:0]] <= res;
-          end
-      end
-		end
-        MEM_TRAP   : begin
-            wb_op <= WB_TRAP;
-            wb_res <= mem_inst;
+                                end
+                            end else begin*/
+                            registers[NORMAL_MODE][mem_target[4:0]] <= res;
+                            //end
+                        end else begin
+                            extra_regs[mem_target[7:0]] <= res;
+                        end
+                    end
+                end
+                MEM_TRAP   : begin
+                    wb_op <= WB_TRAP;
+                    wb_res <= mem_inst;
+                end
+                MEM_NOP    : wb_op <= WB_NOP;
+                MEM_ERR    : wb_op <= WB_ERR;
+            endcase
         end
-        MEM_NOP : wb_op <= WB_NOP;
-		MEM_ERR    : wb_op <= WB_ERR;
-	endcase
+        STATE_WAITING: begin
+            if(i_data_ack) begin
+                wb_op <= WB_WRITE;
+                wb_res <= i_data;
+                mem_state <= STATE_NORMAL;
+            end
+        end
+    endcase
 end
 
 // WB block
@@ -620,19 +654,21 @@ assign next_pc =
     pc + 4;
 
 always @(posedge clk) begin
+    if_prediction_failed <= kill;
+
     if(id_mode == NORMAL_MODE) begin
         if(wb_op == WB_TRAP || wb_op == WB_ERR) begin
             if_mode <= DUAL_MODE;
         end
-        pc <= next_pc;
+        if_pc_request <= next_pc;
       end else begin
         if(wb_op == WB_TRAP) begin
             // In this case, a SYSTEM instruction was executed.
             // We go back to normal mode.
             if_mode <= NORMAL_MODE;
-            pc <= registers[DUAL_MODE][1];
+            if_pc_request <= registers[DUAL_MODE][1];
         end else begin
-            pc <= next_pc;
+            if_pc_request <= next_pc;
         end
     end
 

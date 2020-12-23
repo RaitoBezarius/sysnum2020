@@ -112,7 +112,7 @@ A way to solve this is to use branch prediction, but it requires statistical str
 
 - [ ] 5-staged pipeline
 
-- [ ] Wishbone interconnection with a (FPGA) block RAM
+- [x] Wishbone interconnection with a (FPGA) block RAM
 - [ ] HALT signal
 - [x] STALL signal
 - [ ] RESET signal
@@ -143,7 +143,7 @@ A way to solve this is to use branch prediction, but it requires statistical str
 
 ## Data cache / instruction cache (Ryan)
 
-- [ ] Lay out the bare minimum in the CPU
+- [x] Lay out the bare minimum in the CPU
 - [ ] 2-way associative simple read-write data cache
 - [ ] Formal verification using SymbiYosys
 - [ ] Connect it to the CPU
@@ -177,7 +177,7 @@ Go go go : <https://riscv.org/wp-content/uploads/2019/03/riscv-debug-release.pdf
 
 ## FreeRTOS (???)
 
-- [ ] Port it to our board (instant if CLINT is implemented)
+- [x] Port it to our board (instant if CLINT is implemented)
 - [ ] Make it run.
 - [ ] Put the clock on it.
 
