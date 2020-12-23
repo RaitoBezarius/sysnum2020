@@ -29,7 +29,7 @@ output o_wb_we, o_wb_stb;
 output [3:0] o_wb_sel;
 output [W-1:0] o_data;
 input  [W-1:0] i_data;
-input i_data_stall, i_data_ack;
+input i_data_ack, i_data_stall;
 
 output [W-1:0] rom_addr;
 input  [W-1:0] rom_in;
@@ -537,9 +537,11 @@ always @(posedge clk) begin
 end
 
 // MEM block
-reg [1:0] mem_state;
+reg [0:0] mem_state;
 parameter STATE_NORMAL  = 1'b0;
 parameter STATE_WAITING = 1'b1;
+
+assign mem_stall = mem_op == MEM_LOAD || mem_state == STATE_WAITING;
 
 assign mem_triggers_write = (mem_op == MEM_FORWARD || mem_op == MEM_LOAD);
 assign mem_fwd = mem_op == MEM_FORWARD ? res :
@@ -553,7 +555,7 @@ assign o_wb_sel = (mem_data_ty == DATA_B) ? 4'b0001 :
   4'b1111)));
 assign o_data_addr = mem_target;
 assign o_wb_we = (mem_mode == NORMAL_MODE && mem_op == MEM_STORE);
-assign o_wb_stb = (mem_mode == NORMAL_MODE && (mem_op == MEM_STORE || mem_op == MEM_LOAD)); // Initiate an operation
+assign o_wb_stb = mem_state == STATE_NORMAL && (mem_mode == NORMAL_MODE && (mem_op == MEM_STORE || mem_op == MEM_LOAD)); // Initiate an operation
 assign o_data = (mem_mode == NORMAL_MODE) ? 
   ((mem_data_ty == DATA_B) ? 32'(signed'(res[7:0])) :
   ((mem_data_ty == DATA_H) ? 32'(signed'(res[15:0])) :
@@ -595,6 +597,7 @@ always @(posedge clk) begin
                     if(mem_mode == NORMAL_MODE) begin
                         wb_op <= WB_NOP;
                         mem_state <= STATE_WAITING;
+                        mem_op_request <= MEM_NOP;
                     end else begin // Dual mode
                         wb_op <= WB_WRITE;
                         wb_res <= dual_data;
