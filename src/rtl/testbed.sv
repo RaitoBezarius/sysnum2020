@@ -82,6 +82,8 @@ hart #(
 	.clk(clk),
 
   .i_data(bram_o_data),
+  .i_data_ack(bram_ack),
+  .i_data_stall(bram_stall),
   .o_data(bram_i_data),
   .o_data_addr(bram_i_addr),
   .o_wb_sel(bram_sel),
