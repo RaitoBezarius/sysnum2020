@@ -1,6 +1,8 @@
 [tasks]
 bram bmc
 bram prove
+bram_for_cache_lines bmc
+bram_for_cache_lines prove
 
 [options]
 bmc: 
@@ -18,6 +20,13 @@ bram:
 read -sv block_ram.sv
 hierarchy -top block_ram
 chparam -set LGMEMSZ 3
+prep -top block_ram
+bram_for_cache_lines:
+read -sv block_ram.sv
+hierarchy -top block_ram
+chparam -set LGMEMSZ 3
+chparam -set AW 5
+chparam -set DW 8
 prep -top block_ram
 
 [files]

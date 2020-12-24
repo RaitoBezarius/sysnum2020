@@ -13,7 +13,7 @@ module dcache #(
 (
   i_clk, i_reset, i_flush,
   i_stb, i_op, i_addr, i_data,
-  o_busy
+  o_busy, o_cache_hits, o_cache_misses
 );
 
 localparam PAGE_SIZE = 4*1024; // 4kb.
@@ -62,6 +62,19 @@ output reg [(DW-1):0] o_data; // Actual data under valid flag.
 
 // Cache→Memory interface
 
+// Tag management interface using BRAMs.
+wire tag_stb, tag_stall, tag_ack;
+reg [IDX_BITS-1:0] tag_idx;
+tag_struct tag_out[WAYS-1:0];
+tag_struct tag_in[WAYS-1:0];
+reg tag_we[WAYS-1:0];
+
+wire cache_hit;
+wire [XLEN-1:0] o_cache_hits, o_cache_misses; // There can be at most 2^32 cache hits, cache misses.
+
+assign o_cache_hits = cache_hit ? o_cache_hits + 1 : o_cache_hits;
+assign o_cache_misses = !cache_hit ? o_cache_misses + 1 : o_cache_misses;
+
 generate
   for (way = 0; way < WAYS ; way++)
   begin: gen_ways_tag
@@ -69,7 +82,7 @@ generate
     block_ram #(
       .AW(IDX_BITS),
       .DW(TAG_BITS),
-      .LGMEMSZ(IDX_BITS) // idx_bits entries.
+      .LGMEMSZ(IDX_BITS) // idx_bits entries. FIXME(Ryan): this is a suboptimal way to setup the block ram but it requires rewrite of the parameters.
     ) tag_ram(
       .i_reset(i_reset),
       .i_clk(i_clk),
@@ -104,10 +117,6 @@ output reg [(W/8-1):0] o_wb_sel;
 // Wishbone slave interface
 input wire i_wb_stall, i_wb_ack, i_wb_err;
 input wire [(W-1):0] i_wb_data;
-
-// Cache
-tag_struct tag_in[WAYS];
-logic cache_hit;
 
 
 always @(posedge i_clk)

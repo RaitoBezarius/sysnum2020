@@ -4,7 +4,9 @@ module block_ram
 #(
   parameter XLEN = 32,
   parameter LGMEMSZ = 19,
-  parameter W = XLEN
+  parameter W = XLEN,
+  parameter AW = W, // Address width
+  parameter DW = W // Data width
 )
 (
   i_clk, i_reset, i_wb_stb, i_addr, i_data,
@@ -15,27 +17,19 @@ module block_ram
 // Wishbone slave control
 input wire i_clk, i_wb_stb, i_reset;
 
-input wire [W-1:0] i_addr;
-input wire [W-1:0] i_data;
+input wire [AW-1:0] i_addr;
+input wire [DW-1:0] i_data;
 input wire i_wb_we; // Write enable
-input wire [3:0] i_wb_sel; // Byte enable
-output reg [W-1:0] o_wb_data;
+input wire [(DW/8)-1:0] i_wb_sel; // Byte enable
+output reg [DW-1:0] o_wb_data;
 
 output wire o_wb_stall;
 output reg o_wb_ack;
 
-// RAM block
-reg [W-1:0] ram [(1 << LGMEMSZ) - 1:0];
+initial o_wb_ack = 1'b0;
 
-integer k;
-initial 
-begin
-  o_wb_ack = 1'b0;
-  for (k = 0 ; k < W ; k = k + 1)
-    o_wb_data[k] = 0;
-  for (k = 0; k < (1 << LGMEMSZ); k = k + 1)
-    ram[k] = 0;
-end
+// RAM block
+reg [DW-1:0] ram [(1 << LGMEMSZ) - 1:0];
 
 assign o_wb_stall = 1'b0; // We can read/write each clock rate.
 
@@ -74,9 +68,9 @@ end
     `define ASSUME assert
   `endif
   // Inspired from ZipCPU blog post on formal verification of memories.
-  (* anyconst *) wire [W-1:0] f_addr;
+  (* anyconst *) wire [AW-1:0] f_addr;
   reg f_past_valid;
-  reg [W-1:0] f_data;
+  reg [DW-1:0] f_data;
 
   initial assume (f_data == ram[f_addr]);
   initial f_past_valid = 1'b0;

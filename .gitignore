@@ -6,4 +6,4 @@ olg/RISC-V/a.out
 build/
 _vgenerated/
 
-**/core_bram
+**/core_bram*
