@@ -16,11 +16,11 @@
 // Bank 1 is generally considered as the RAM controller.
 // We still have ~ 2.976GB of address space.
 
-`define BANK_1_BOUNDARY 'h20000000
-`define BANK_2_BOUNDARY 'h28000000
-`define BANK_3_BOUNDARY 'h30000000
-`define BANK_4_BOUNDARY 'h38000000
-`define BANK_5_BOUNDARY 'h40000000
+`define BANK_1_BOUNDARY 32'h20000000
+`define BANK_2_BOUNDARY 32'h28000000
+`define BANK_3_BOUNDARY 32'h30000000
+`define BANK_4_BOUNDARY 32'h38000000
+`define BANK_5_BOUNDARY 32'h40000000
 
 module memory_system #(
   parameter XLEN = 32,
@@ -28,7 +28,8 @@ module memory_system #(
   parameter MW = 64,
   parameter N_BUSES = 5,
   parameter BW = MW/8
-) (i_clk, i_reset,
+
+  ) (i_clk, i_reset,
   i_rw_addr, i_data, i_be, i_we, i_rw_stb,
   o_rw_ack, o_rw_stall, o_rw_err, o_rw_data,
   o_rw_cyc,
@@ -47,6 +48,8 @@ module memory_system #(
   i_wbs5_data, o_wbs5_data, i_wbs5_ack, i_wbs5_stall,
   i_wbs5_err, o_wbs5_be, o_wbs5_stb, o_wbs5_we, o_wbs5_addr
 );
+
+localparam [AW-1:0] BOUNDARIES [4:0] = '{32'h0, `BANK_1_BOUNDARY, `BANK_2_BOUNDARY, `BANK_3_BOUNDARY, `BANK_4_BOUNDARY};
 
 input wire i_clk, i_reset;
 
@@ -272,13 +275,13 @@ function automatic [(AW-1):0] get_addr;
   input [2:0] index;
 
   if (paddr_rw_sel == paddr_ro_sel && paddr_rw_sel == index)
-    get_addr = i_rw_addr;
+    get_addr = i_rw_addr - BOUNDARIES[index];
   else
   begin
     if (paddr_rw_sel == index)
-      get_addr = i_rw_addr;
+      get_addr = i_rw_addr - BOUNDARIES[index];
     else if (paddr_ro_sel == index)
-      get_addr = i_ro_addr;
+      get_addr = i_ro_addr - BOUNDARIES[index];
     else
       get_addr = 'hx;
   end
