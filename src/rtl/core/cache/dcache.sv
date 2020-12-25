@@ -12,9 +12,33 @@ module dcache #(
 )
 (
   i_clk, i_reset, i_flush,
-  i_stb, i_op, i_addr, i_data,
-  o_busy, o_cache_hits, o_cache_misses
+  i_wb_stb, i_addr, i_data, i_be, i_we, o_wb_stall, o_wb_ack, o_wb_err, o_data,
+  i_mem_ack, i_mem_stall, i_mem_wb_err,
+  i_mem_addr, i_mem_data, o_mem_data, o_mem_wb_stb, o_mem_wb_we, o_mem_wb_be,
+  o_cache_hits, o_cache_misses
 );
+
+// Syscon
+input wire i_clk, i_reset, i_flush;
+
+// CPU interface
+input wire i_wb_stb, i_we;
+input wire [AW-1:0] i_addr;
+input wire [DW-1:0] i_data;
+input wire [DW/8-1:0] i_be;
+
+output wire o_wb_stall;
+output [DW-1:0] o_data;
+output reg o_wb_ack, o_wb_err;
+
+// Memory system interface
+input wire i_mem_ack, i_mem_stall, i_mem_wb_err;
+input wire [AW-1:0] i_mem_addr;
+input wire [MW-1:0] i_mem_data;
+output wire [MW-1:0] o_mem_data;
+output reg o_mem_wb_stb;
+output wire o_mem_wb_we;
+output wire [MW/8-1:0] o_mem_wb_we;
 
 localparam PAGE_SIZE = 4*1024; // 4kb.
 localparam MAX_IDX_BITS = $clog2(PAGE_SIZE) - $clog2(BLOCK_SIZE); // log_2(page_size / block_size)
@@ -23,12 +47,17 @@ localparam BLK_OFF_BITS = $clog2(BLOCK_SIZE); // Number of BlockOffset bits
 localparam IDX_BITS = $clog2(SETS); // Number of Index bits
 localparam TAG_BITS = XLEN - IDX_BITS - BLK_OFF_BITS; // Number of tag bits.
 
-localparam [1:0] DC_IDLE = 2'b00;
-localparam [1:0] DC_WRITE = 2'b01;
-localparam [1:0] DC_READS = 2'b10; // Read a single value cached
-localparam [1:0] DC_READM = 2'b11; // Read a whole cache line
+/* States */
+localparam IDLE = 0;
+localparam UNCACHEABLE = 1;
+localparam REFRESH_1 = 2;
+localparam CLEAN_SINGLE = 3;
+localparam FETCH_SINGLE = 4;
+localparam REFRESH = 5;
+localparam INVALIDATE = 6;
+localparam CLEAN = 7;
 
-enum logic [1:0] {DC_IDLE, DC_WRITE, DC_READS, DC_READM} state; // Cache FSM state.
+enum logic [$clog2(MAX_STATE) - 1:0] {IDLE, UNCACHEABLE, REFRESH_1, CLEAN_SINGLE, FETCH_SINGLE, REFRESH, INVALIDATE, CLEAN} state;
 
 typedef struct {
   logic [IDX_BITS - 1:0] idx;
@@ -49,18 +78,12 @@ typedef struct {
 localparam TAG_STRUCT_BITS = $bits(tag_struct);
 
 input wire i_clk, i_reset, i_flush;
-// CPU→Cache interface
-input wire i_wb_cyc, i_wb_stb; // Wishbone specific.
-input wire i_we; // Write enable.
-input wire [(AW-1):0] i_addr; // Target address.
-input wire [(DW-1):0] i_data; // For the cache writes.
-input wire [(AW/8-1):0] i_be; // Byte enable.
 
-output reg o_wb_stall, o_wb_ack, o_wb_err; // Wishbone specific.
-output reg o_valid; // Valid data.
-output reg [(DW-1):0] o_data; // Actual data under valid flag.
+pipeline_write_buffer_t write_buffer; // To not pay the penalty of a write-through, we implement a write buffer we flush once it's full.
 
-// Cache→Memory interface
+// Cachability (memory mapped IOs exclusion)
+wire cachable_addr;
+iscachable check_address(i_addr, cachable_addr);
 
 // Tag management interface using BRAMs.
 wire tag_stb, tag_stall, tag_ack;
@@ -74,6 +97,22 @@ wire [XLEN-1:0] o_cache_hits, o_cache_misses; // There can be at most 2^32 cache
 
 assign o_cache_hits = cache_hit ? o_cache_hits + 1 : o_cache_hits;
 assign o_cache_misses = !cache_hit ? o_cache_misses + 1 : o_cache_misses;
+
+// Random way generation
+reg [19:0] way_random;
+wire [WAYS-1:0] fill_way_select;
+initial way_random = 'h0;
+always @(posedge i_clk)
+  if (!filling) way_random <= {way_random, way_random[19] ~^ way_random[16]}; // LFSR for apparent randomness.
+
+assign fill_way_select = (WAYS == 1) ? 1 : 1 << way_random[$clog2(WAYS)-1:0];
+
+// Extract tag from address.
+wire [TAG_BITS-1:0] c_tag;
+wire [IDX_BITS-1:0] c_paddr_idx; // Physical index.
+
+assign c_tag = i_addr[XLEN-1 -: TAG_BITS];
+assign c_paddr_idx = i_addr[BLK_OFF_BITS +: IDX_BITS];
 
 generate
   for (way = 0; way < WAYS ; way++)
@@ -100,24 +139,7 @@ generate
   end
 endgenerate
 
-output wire o_wb_cyc;
-output reg o_wb_stb, o_wb_we;
-output reg [(AW-1):0] o_wb_addr;
-output reg [(MW-1):0] o_wb_data; // Memory data.
-output reg [(W/8-1):0] o_wb_sel;
+wire should_buffer_write; // This control write buffer behavior vs write through.
+assign should_buffer_write = write_buffer.was_write && cachable_addr; // If it's not a cachable addr, it's not useful to try to cache it.
 
-// Wishbone master interface
-output wire o_wb_cyc;
-output reg o_wb_stb;
-output reg o_wb_we;
-output reg [(W-1):0] o_wb_addr;
-output reg [(W-1):0] o_wb_data;
-output reg [(W/8-1):0] o_wb_sel;
-
-// Wishbone slave interface
-input wire i_wb_stall, i_wb_ack, i_wb_err;
-input wire [(W-1):0] i_wb_data;
-
-
-always @(posedge i_clk)
 end
