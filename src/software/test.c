@@ -1,8 +1,18 @@
 inline __attribute__((always_inline)) int read_csr(const int csr_num) {
     int result;
-    __asm__ __volatile__("csrr %[result], %[csrnum]" : [result] "=r"(result) : [csrnum] "I"(csr_num));
+    __asm__ __volatile__("csrr %[result], %[csrnum]" : [result] "=r"(result) : [csrnum] "i"(csr_num));
     return result;
 }
+
+int read_misa() {
+    return read_csr(0x0);
+}
+int read_mvendorid() {
+}
+
+int read_xlen() {
+}
+
 
 enum {
     CSR_CYCLE = 0xC00,
@@ -17,7 +27,7 @@ void main() {
     unsigned int epoch = 0;
 
     while(1) {
+        epoch++;
         // FIXME(Ryan): it do not read 0xC00-YYY constant values… something something GCC.
-        epoch = read_csr(0xC0);
     }
 }

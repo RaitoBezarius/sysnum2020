@@ -37,6 +37,30 @@ Just allow the file: `direnv allow` and your shell will be provided with all tha
 
 TODO: package the Vivado toolchain nicely and provide the bitstream generation mechanism and upload.
 
+# Makefile documentation
+
+`_vgenerated` is what Verilator produces.
+`build` is the default build directory for useful artefacts, e.g. firmware, simulation runtime, etc.
+
+```console
+make clean # remove build/ and _vgenerated/
+make test # test the default testbed
+make test-memory # test the memory system directly with the hart0 using a block RAM
+make dis-soft # disassemble the current test.elf
+# TODO
+make test-dcache # test the D-cache directly with the hart0 using a memory system linked with a block RAM
+make test-uart # test the UART mechanism using a linux FIFO socket
+make test-compliance # run the compliance test suite
+make test-mmu # test the MMU
+make formal # perform formal verification on all components
+make upload-fpga # use Vivado to upload the current design to the FPGA
+make flash-spi # use a programmer to flash to a SPI an initial firmware for persistent design
+make freertos # build an image of FreeRTOS for a demo
+make linux # build an RV32IM image of linux for a demo
+```
+
+The `Makefile` is pretty much modular and has some variables configurable for quick'n'dirty / temporary tests, please read: `Makefile` or `Rules.mk`.
+
 # Documentation
 
 Some draft "frozen" (for us) docs are in docs/, including RISC-V specs, RISC-V privileged specs and Interrupt Cookbook from SiFive, please use them as a reference.
@@ -48,9 +72,13 @@ Some draft "frozen" (for us) docs are in docs/, including RISC-V specs, RISC-V p
 Target is a 5-staged pipeline processor.
 
 (1) Instruction fetching (IF)
+
 (2) Decode, register fetching: `rs1, rs2` (ID)
-(3) Execution (EX)
+
+(3) Execution (EX)a
+
 (4) Arbitrary memory access (MA)
+
 (5) Write-back (WB)
 
 Due to RISC-V ISA, there can be no structural hazards by design, at any moment, two instructions cannot require the same hardware resource at same time.
@@ -152,7 +180,7 @@ A way to solve this is to use branch prediction, but it requires statistical str
 
 - [ ] Lay out the bare minimum in the CPU
 - [ ] Simple permissions model
-- [ ] IO memory mapping (?)
+- [x] IO memory mapping (through a memory subsystem, allow for up to 5 buses, thus 4 IOs or 3 IOs + 1 registers, excluding the RAM controller)
 - [ ] Formal verification using Symbiyosys
 - [ ] Connect it to the CPU
 
@@ -170,8 +198,8 @@ Go go go : <https://riscv.org/wp-content/uploads/2019/03/riscv-debug-release.pdf
 
 ## Arty S7-50 FPGA-specific (???)
 
-- [ ] Generate the DDR3L Xilinx AXI controller
-- [ ] Write a AXI to Wishbone bridge
+- [ ] Generate the DDR3L Xilinx FIFO controller
+- [ ] Write a native FIFO to Wishbone bridge
 - [ ] Connect the 100MHz clock to the RAM controller
 - [ ] Connect the DDR3L to the CPU or the cache
 
