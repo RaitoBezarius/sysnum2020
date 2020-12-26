@@ -232,7 +232,7 @@ if ((o_ro_ack))
   o_ro_cyc <= 1'b0;
 
 always @(posedge i_clk)
-if ((i_rw_stb)&&(!o_rw_stall))
+if (!o_rw_stall)
 begin
   o_rw_cyc <= 1'b1;
   case (paddr_rw_sel)
@@ -252,7 +252,7 @@ begin
 end
 
 always @(posedge i_clk)
-if ((i_ro_stb)&&(!o_ro_stall))
+if (!o_ro_stall)
 begin
   o_ro_cyc <= 1'b1;
   case (paddr_ro_sel)

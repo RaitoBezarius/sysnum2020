@@ -16,7 +16,6 @@ module memsys_testbed(clk, reset);
 `define N_TICKS 5000
 `endif
 
-
 localparam XLEN = `XLEN;
 localparam W = XLEN; // RAM width.
 

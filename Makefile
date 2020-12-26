@@ -8,9 +8,11 @@ RISCV-ELF2HEX = riscv32-none-elf-elf2hex
 
 # Simulation
 VERILOG-CC = verilator
-VERILOG-FLAGS = -Wall --cc -MMD -Isrc/rtl -Wno-fatal --build --exe -DN_TICKS=$(SIMULATION_N_TICKS) -DXLEN=$(XLEN) --Mdir $(VERILOG_GENERATED) --trace
+VERILOG-FLAGS = -Wall --cc -MMD -Isrc/rtl -Wno-fatal --build --exe -DN_TICKS=$(SIMULATION_N_TICKS) -DXLEN=$(XLEN) --Mdir $(VERILOG_GENERATED) --trace --trace-structs
 VERILOG_GENERATED = _vgenerated
 VERILOG_MAKEFILE = Vtestbed.mk
+VERILOG-TRACE-MAX-ARRAY-DEPTH = 65536
+VERILOG-TRACE-MAX-WIDTH = 65536
 
 SIMULATOR =
 SIMULATOR-FLAGS = +nticks+$(SIMULATION_N_TICKS)

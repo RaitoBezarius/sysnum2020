@@ -14,6 +14,9 @@ module hart
   i_data,
   i_data_ack,
   i_data_stall,
+  i_data_err,
+  i_data_cache_hits,
+  i_data_cache_misses,
   o_data,
   o_data_addr,
 	rom_addr,
@@ -29,7 +32,9 @@ output o_wb_we, o_wb_stb;
 output [3:0] o_wb_sel;
 output [W-1:0] o_data;
 input  [W-1:0] i_data;
-input i_data_ack, i_data_stall;
+input i_data_ack, i_data_stall, i_data_err;
+
+input [W-1:0] i_data_cache_hits, i_data_cache_misses;
 
 output [W-1:0] rom_addr;
 input  [W-1:0] rom_in;

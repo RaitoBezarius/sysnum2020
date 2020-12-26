@@ -1,7 +1,7 @@
 
 `default_nettype none
 
-`include "core/hart.sv"
+`include "core/soc.sv"
 
 module testbed(clk, reset);
 
@@ -75,26 +75,18 @@ block_ram #(
   .o_wb_ack(bram_ack)
 );
 
-// RISC-V hart
-hart #(
+// RISC-V System On Chip
+
+soc #(
   .XLEN(XLEN)
-) hart0(
-	.clk(clk),
+) test_soc(
+  .i_clk(clk),
+  .i_reset(reset),
 
-  .i_data(bram_o_data),
-  .i_data_ack(bram_ack),
-  .i_data_stall(bram_stall),
-  .o_data(bram_i_data),
-  .o_data_addr(bram_i_addr),
-  .o_wb_sel(bram_sel),
-  .o_wb_we(bram_we),
-  .o_wb_stb(bram_stb),
-
-	.rom_addr(rom_addr),
-	.rom_in(rom_out),
-
+  .rom_addr(rom_addr),
+  .rom_out(rom_out),
   .fw_rom_addr(fw_rom_addr),
-  .fw_rom_in(fw_rom_out)
+  .fw_rom_out(fw_rom_out)
 );
 
 // Simulation tracing and run.

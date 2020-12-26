@@ -24,21 +24,19 @@ output reg o_cachable;
 always @(*)
 begin
   o_cachable = 1'b0;
-
-  if (i_addr < `BANK_1_BOUNDARY)
-    o_cachable <= BANK_1_CACHABLE;
-
-  if (i_addr < `BANK_2_BOUNDARY)
-    o_cachable <= BANK_2_CACHABLE;
-
-  if (i_addr < `BANK_3_BOUNDARY)
-    o_cachable <= BANK_3_CACHABLE;
-
-  if (i_addr < `BANK_4_BOUNDARY)
-    o_cachable <= BANK_4_CACHABLE;
-
+  // Always start from the end.
+  // Otherwise, Verilog will always attribute the BANK_5_CACHABLE status
+  // obviously.
   if (i_addr < `BANK_5_BOUNDARY)
-    o_cachable <= BANK_5_CACHABLE;
+    o_cachable = BANK_5_CACHABLE;
+  if (i_addr < `BANK_4_BOUNDARY)
+    o_cachable = BANK_4_CACHABLE;
+  if (i_addr < `BANK_3_BOUNDARY)
+    o_cachable = BANK_3_CACHABLE;
+  if (i_addr < `BANK_2_BOUNDARY)
+    o_cachable = BANK_2_CACHABLE;
+  if (i_addr < `BANK_1_BOUNDARY)
+    o_cachable = BANK_1_CACHABLE;
 end
 
 endmodule

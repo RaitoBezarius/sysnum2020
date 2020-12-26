@@ -14,13 +14,15 @@ module block_ram
   o_wb_data, o_wb_stall, o_wb_ack
 );
 
+localparam BW = DW/8;
+
 // Wishbone slave control
 input wire i_clk, i_wb_stb, i_reset;
 
 input wire [AW-1:0] i_addr;
 input wire [DW-1:0] i_data;
 input wire i_wb_we; // Write enable
-input wire [(DW/8)-1:0] i_wb_sel; // Byte enable
+input wire [BW-1:0] i_wb_sel; // Byte enable
 output reg [DW-1:0] o_wb_data;
 
 output wire o_wb_stall;
@@ -42,20 +44,16 @@ if (i_reset)
 else
   o_wb_ack <= ((i_wb_stb)&&(!o_wb_stall));
 
-always @(posedge i_clk)
+genvar sel_index;
+generate
+for (sel_index = 0 ; sel_index < BW ; sel_index++)
 begin
-  if ((i_wb_stb)&&(i_wb_we)&&(!o_wb_stall)&&(i_wb_sel[3]))
-    ram[i_addr][31:24] <= i_data[31:24];
-
-  if ((i_wb_stb)&&(i_wb_we)&&(!o_wb_stall)&&(i_wb_sel[2]))
-    ram[i_addr][23:16] <= i_data[23:16];
-
-  if ((i_wb_stb)&&(i_wb_we)&&(!o_wb_stall)&&(i_wb_sel[1]))
-    ram[i_addr][15:8] <= i_data[15:8];
-
-  if ((i_wb_stb)&&(i_wb_we)&&(!o_wb_stall)&&(i_wb_sel[0]))
-    ram[i_addr][7:0] <= i_data[7:0];
+  always @(posedge i_clk)
+  if ((i_wb_stb)&&(i_wb_we)&&(!o_wb_stall)&&(i_wb_sel[sel_index]))
+    ram[i_addr][8*(sel_index + 1) - 1:8*sel_index] <= i_data[8*(sel_index + 1) - 1:8*sel_index];
 end
+endgenerate
+
 
 `ifdef FORMAL
   // We want to proceed to a thorough verification when verified in a larger
