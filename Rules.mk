@@ -9,9 +9,11 @@ dir := src/software
 include $(dir)/Makefile.mk
 dir := src/rtl
 include $(dir)/Makefile.mk
+dir := vendor/
+include $(dir)/Makefile.mk
 
 .PHONY:	targets
-targets: mk_build_directory $(TGT_FIRMWARE) $(TGT_SOFTWARE) $(TGT_SIM_RUNTIME)
+targets: mk_build_directory $(TGT_FIRMWARE) $(TGT_SOFTWARE) $(TGT_SIM_RUNTIME) $(TGT_FREERTOS_DEMO_IMAGE)
 
 test: targets
 	cd $(BUILDDIR) && ./$(TESTBED_EXECUTABLE) $(SIMULATOR-FLAGS)
@@ -30,7 +32,7 @@ dis-soft:
 .PHONY:	clean
 clean:
 	rm -f $(CLEAN)
-	rm -rf $(VERILOG_GENERATED)
+	rm -rf $(VERILOG_GENERATED) $(CLEAN_DIRS)
 
-.SECONDARY:	$(CLEAN)
+.SECONDARY:	$(CLEAN) $(CLEAN_DIRS)
 

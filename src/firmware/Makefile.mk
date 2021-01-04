@@ -3,7 +3,7 @@ sp := $(sp).x
 dirstack_$(sp) := $(d)
 d := $(dir)
 
-SOURCES_$(d) = $(shell find . -type f -name '*.s')
+SOURCES_$(d) = $(shell find $(d) -type f -name '*.s')
 
 FIRMWARE_PROGRAM_ELF = firmware.elf
 FIRMWARE_PROGRAM = firmware.hex

@@ -1,5 +1,13 @@
 with import <nixpkgs> {
-  crossSystem = (import <nixpkgs/lib>).systems.examples.riscv32-embedded;
+  crossSystem = (import <nixpkgs/lib>).systems.examples.riscv32-embedded // {
+    platform = {
+      name = "riscv-soft-float-multiplatform";
+      kernelArch = "risc";
+      kernelTarget = "vmlinux";
+      bfdEmulation = "elf32lriscv";
+      gcc.arch = "rv32im";
+    };
+  };
 };
 
 let

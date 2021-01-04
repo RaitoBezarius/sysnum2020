@@ -1,3 +1,6 @@
 [submodule "riscv-compliance"]
 	path = riscv-compliance
 	url = git@github.com:RaitoBezarius/riscv-compliance
+[submodule "vendor/FreeRTOS"]
+	path = vendor/FreeRTOS
+	url = git@github.com:RaitoBezarius/FreeRTOS
