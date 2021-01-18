@@ -59,6 +59,14 @@ Un agencement d'éléments (fils de redstone, torches de redstones, blocs, etc.)
 
 Quelques timings ajustés et des fonctionnalités de Minecraft permettent de faire des latchs : sauvegarde de données.
 
+## Exemple redstone
+
+![OR gate](./images/OR_gate.png)
+
+## Exemple redstone
+
+![Clock](./images/clock.png)
+
 ## ISA : V-RISC-V
 
 V-RISC-V = Very Reduced Instruction Set Computer (-V pour le jeu de mot)
@@ -110,6 +118,10 @@ Registres spéciaux :
 
 ## Aspect technique
 
+## Laines
+
+![Laines](./images/wool.png)
+
 ## Conclusion et ouvertures
 
 **Achievements :**
@@ -122,10 +134,29 @@ CPU V-RISC-V avec ROM, registres, ALU, instructions arithmétiques et logiques.
 
 RAM, I/O utilisateur^[O : afficheurs 7-segments; I : sélecteurs à leviers], découpage de l'espace mémoire, pipeline^[En fait déjà presque possible...]
 
+## Conclusion
 
+![Serveur](./images/lapins.png)
 
 # Le processeur RISC-V (Sakaido, le brillant)
 
 ## Fonctionnalités principales
 
 Il s'agit d'un processeur RISC-V qui implémente RV32I^[RV32IM était disponible à un moment].
+
+## Contrôleur VGA
+
+Contrôleur VGA `640x480`.
+
+![setup](./images/vga1.jpg)
+
+## Contrôleur VGA
+
+![test](./images/vga0.jpg)
+
+## Contrôleur VGA
+
+Affichage d'une matrice de caractères
+
+![](./images/vga2.jpg)
+
