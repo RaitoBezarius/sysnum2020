@@ -148,7 +148,11 @@ RAM, I/O utilisateur^[O : afficheurs 7-segments; I : sélecteurs à leviers], d�
 
 ## Fonctionnalités principales
 
-Il s'agit d'un processeur RISC-V qui implémente RV32I^[RV32IM était disponible à un moment].
+Il s'agit d'un processeur RISC-V
+
+- Implémente RV32I^[RV32IM était disponible à un moment]
+- Implémentation pipelinée
+- Communication par Wishbone avec la mémoire
 
 ## Contrôleur VGA
 
@@ -165,4 +169,23 @@ Contrôleur VGA `640x480`.
 Affichage d'une matrice de caractères
 
 ![](./images/vga2.jpg)
+
+## Pipeline
+
+- 5 étages : IF, ID, EXE, MEM, WB
+- Forwarding
+  - Essentiellement entre MEM et EXE
+- Prédiction : « predict not taken »
+  - Signal KILL
+
+## Pipeliner RISC-V
+
+RISC-V est conçu pour des implémentations selon ce modèle de pipeline.
+
+## Communication avec la mémoire
+
+- Les accès mémoire peuvent prendre un temps arbitraire
+- Il faut donc mettre le processeur en pause le temps qu'ils soient traités
+- Signal STALL
+- Petite machine à états (exécution normale / attente de données)
 
