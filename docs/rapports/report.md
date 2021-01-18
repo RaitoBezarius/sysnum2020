@@ -53,3 +53,7 @@ Pour cela, nous avons un signal `STALL` qui bloque les étages `IF`, `ID`,
 `EXE` et `MEM` dans leur état courant en attendant un signal de type `ACK`
 de la part de la mémoire.
 
+Ceci a aussi demandé d'implémenter une petite machine à états dans l'étage MEM :
+ * Soit on suit une exécution normale
+ * Soit on est en train d'attendre des données de la mémoire
+
