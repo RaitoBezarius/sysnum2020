@@ -9,7 +9,7 @@ theme: metropolis
 
 # Introduction
 
-## Car c'est notre projet !
+## Parce que c'est notre projet !
 
 Le projet se divise en deux sous-projets :
 
@@ -61,7 +61,7 @@ Quelques timings ajustés et des fonctionnalités de Minecraft permettent de fai
 
 ## Exemple redstone
 
-![OR gate](./images/OR_gate.png)
+![AND gate](./images/OR_gate.png)
 
 ## Exemple redstone
 
@@ -71,7 +71,7 @@ Quelques timings ajustés et des fonctionnalités de Minecraft permettent de fai
 
 V-RISC-V = Very Reduced Instruction Set Computer (-V pour le jeu de mot)
 
-Données sur 8 bits, instructions sur 32 bits.
+Données sur 8 bits, instructions sur 32 bits (pourt l'instant 26 bits utilisés).
 
 . . .
 
@@ -102,7 +102,7 @@ Avec les instructions de base et les registres spéciaux :
 
 ## Registres
 
-16 general purpose registers : `%0` to `%15`.
+16 general purpose^[Enfin dont 3 registres spéciaux] registers : `%0` to `%15`.
 
 . . .
 
@@ -116,7 +116,13 @@ Registres spéciaux :
 - `%1 = -1` → NOT
 - `%15 = random(0, 255)`
 
-## Aspect technique
+## Assembler
+
+On a un assembler de notre ASM vers des commandes MC permettant de programmer des ROM dans Minecraft.
+
+
+
+## Aspects techniques
 
 ## Laines
 
