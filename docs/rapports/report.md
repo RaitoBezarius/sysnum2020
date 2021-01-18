@@ -57,3 +57,25 @@ Ceci a aussi demandé d'implémenter une petite machine à états dans l'étage 
  * Soit on suit une exécution normale
  * Soit on est en train d'attendre des données de la mémoire
 
+## Verilator
+
+Au début, nous utilisions Icarus Verilog, qui a permis de rapidement tester
+notre implémentation.
+
+Mais nous avons rapidement ressenti le besoin de plus instrumenter notre processeur,
+nous avons donc migré vers Verilator, qui est un compilateur de Verilog
+vers C++. Grâce à cela, nous avons pu avoir plus de contrôle sur la simulation,
+en particulier nous sommes en mesure de lire et d'écrire directement la mémoire,
+ce qui permet d'implémenter des entrées-sorties pour l'utilisateur.
+En particulier, c'est ce qui nous permet de nous synchroniser au temps réel
+et d'afficher proprement l'heure.
+
+## System Verilog
+
+Nous avons aussi migré de Verilog vers System Verilog car nous avions besoin
+d'un langage plus expressif alors que la complexité du projet augmentait.
+
+Les systèmes de structures et les raffinements sur les définitions des tableaux
+apportés par System Verilog nous ont facilité grandement facilité la tâche
+lors de l'écriture du système de mémoire (et surtout du cache L1).
+
