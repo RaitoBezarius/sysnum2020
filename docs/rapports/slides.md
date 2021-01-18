@@ -128,6 +128,10 @@ On a un assembler de notre ASM vers des commandes MC permettant de programmer de
 
 ![Laines](./images/wool.png)
 
+## Protections hardware
+
+![Protection side-channel attack](./images/side_channel.png)
+
 ## Conclusion et ouvertures
 
 **Achievements :**
