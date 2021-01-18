@@ -30,9 +30,26 @@ auront écrit leurs données.
 > à choisir cette stratégie, même si elle implique d'utiliser un peu plus
 > de circuits.
 
+Nous avons implémenté un début de système de prédiction de branche -- mais sans aller
+jusqu'à faire des statistiques à la volée sur l'exéction des programmes.
+Nous avons décidé de toujours prédire que les branches ne seront pas prises
+(ce qui était la solution la plus simple).
+En prévision des cas où nous nous trompons sur ces prédictions, nous avons
+ajouté dans le processeur un signal `KILL` qui sert à vider toute la pipeline.
+
 L'ISA RISC-V est conçue pour permettre d'impélenter raisonnablement facilement
 cette pipeline, nous ne nous sommes donc pas heurtés à de trop gros problèmes
 (ce qui ne nous a cependant pas empêchés de passer quelques moments à nous
 battre contre Verilog pour comprendre comment faire exécuter les opérations
 logiques dans l'ordre prévu).
+
+## Synchronisation avec la mémoire
+
+Comme nous voulions avoir un système de mémoire évolué, nous avons dû
+prévoir les cas où les appels à la mémoire prendraient un temps
+arbitrairement long.
+
+Pour cela, nous avons un signal `STALL` qui bloque les étages `IF`, `ID`,
+`EXE` et `MEM` dans leur état courant en attendant un signal de type `ACK`
+de la part de la mémoire.
 
