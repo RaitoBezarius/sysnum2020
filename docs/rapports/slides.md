@@ -71,7 +71,7 @@ Quelques timings ajustés et des fonctionnalités de Minecraft permettent de fai
 
 V-RISC-V = Very Reduced Instruction Set Computer (-V pour le jeu de mot)
 
-Données sur 8 bits, instructions sur 32 bits (pourt l'instant 26 bits utilisés).
+Données sur 8 bits, instructions sur 32 bits (pour l'instant 27 bits utilisés).
 
 . . .
 
