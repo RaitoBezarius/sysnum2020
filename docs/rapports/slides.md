@@ -27,7 +27,7 @@ Le projet se divise en deux sous-projets :
 
 > - Fonctionnalités principales du processeur: extensions, entrées-sorties
 > - Prototypes
-> - Caches, MMU 
+> - Caches, MMU
 > - Wishbone
 > - Vérification formelle avec SymbiYosys
 > - Contrôleur VGA
@@ -72,6 +72,7 @@ V-RISC-V = Very Reduced Instruction Set Computer (-V pour le jeu de mot)
 
 Données sur 8 bits, instructions sur 32 bits (pour l'instant 27 bits utilisés).
 
+
 . . .
 
 - STORE
@@ -95,7 +96,7 @@ Avec les instructions de base et les registres spéciaux :
 - PRINT
 - JMP (inconditionnel)
 - MOV
-- NOT 
+- NOT
 - CMP
 
 ## Registres
@@ -120,9 +121,44 @@ On a un assembler de notre ASM vers des commandes MC permettant de programmer de
 
 
 
-## Aspects techniques
+## Importation de la ROM
 
-## Laines
+![](./images/gen.png)
+
+## Prototypes 1/4
+![](./images/overview1.png)
+
+## Prototypes 2/4
+![](./images/overview2.png)
+
+## Prototypes 3/4
+![](./images/overview3.png)
+
+## Prototypes 4/4
+![](./images/overview4.png)
+
+## Caractéristiques des modules
+- Syncronisés
+- COMPACTS
+- Rapides
+
+## Plomberie
+![](./images/cpus.png)
+
+## V-RISC-C core
+![](./images/v-risc-v-core.png)
+
+## Exemple de programmes
+- horloge
+- fibonacci
+- multiplication
+- $\frac{6}{\pi^2}$
+- $e$
+- queens
+- ackerman (de 3...)
+- quake fast invert square root
+
+## Applications plus intéressante
 
 ![Laines: les orages les brûlent, donc on a coupé la météo dans notre pays.](./images/wool.png)
 
@@ -135,17 +171,25 @@ On a un assembler de notre ASM vers des commandes MC permettant de programmer de
 
 **Achievements :**
 
-CPU V-RISC-V avec ROM, registres, ALU, instructions arithmétiques et logiques.
+CPU V-RISC-V core avec ROM, registres, ALU, instructions arithmétiques et logiques.
 
 . . .
 
-**TODO :** 
+**TODO :**
 
-RAM, I/O utilisateur^[O : afficheurs 7-segments; I : sélecteurs à leviers], découpage de l'espace mémoire, pipeline^[En fait déjà presque possible...]
+RAM, I/O utilisateur^[O : afficheurs 7-segments; I : sélecteurs à leviers], pipeline^[En fait déjà presque possible...]
+
+## Difficultés
+- Chunk loader
+- Compactifier
+- Bugs de world edit
+- Assembler des ROM à la main
+- Débug à la main
+
+![Serveur](./images/lapins.png){ width=50% }
 
 ## Conclusion
-
-![Serveur](./images/lapins.png)
+Une opération toutes les 5 secondes^[On pourrait déjà faire 4 sec.]!!!
 
 # Le processeur RISC-V (Sakaido, le brillant)
 
