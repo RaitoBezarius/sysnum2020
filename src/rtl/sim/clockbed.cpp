@@ -93,8 +93,8 @@ int main(int argc, char **argv) {
         }
         // If a second elapsed, just assert increment now.
         if (enableRealtimeMode) {
-            if (elapsed <= 0.2) {
-                usleep((unsigned int)((0.2 - elapsed)*1000000));
+            if (elapsed <= 0.1) {
+                usleep((unsigned int)((0.1 - elapsed)*1000000));
             }
             //cout << "elapsed: " << tac() << " secs" << endl;
         }
