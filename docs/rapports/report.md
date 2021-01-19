@@ -308,7 +308,17 @@ temps.
 
 ### Achievements
 
+Au terme du projet, nous avons donc conçu une ISA et nous l'avons implémentée (même si ce n'est qu'en partie) dans Minecraft. Nous avons toutes les fonctionnalités de base pour faire tourner quelques petits programmes (assez petits pour tenir dans notre ROM de 128 instructions!)
+
 ### TODO
+
+Un point important sur lequel nous aimerions travailler est la RAM : pour l'instant nous n'en avons pas (notamment parce que les design de RAM Minecraft que nous avons développés, même s'ils marchent très bien, sont lents...)
+
+Un autre but que nous avons pour le futur, lié avec le précédent, est de mettre en place un véritable bus mémoire, pour pouvoir interagir, via cet unique bus, avec la RAM, les écrans, les périphériques d'entrée utilisateur ainsi que, plus génnéralement, tous les périphériques I/O dont on peut rêver (par exemple un stockage de masse, lent mais gros, ou bien même d'autres CPU!).
+
+Un autre point qui nous tient à cœur est l'implémentation en bonne et due forme d'une pipeline dans notre CPU : nous l'avons d'ores et déjà conçu autour d'une pipeline mais il fonctionne encore comme un CPU non-pipeliné. Il ne devrait pas être trop difficile de tirer avantage de cettestructure déjà présente pour avoir un CPU pipeliné avec 4 stages (c'est surtout une affaire de plomberie, d'ajustement des timings, etc.)! 
+
+Finalement, nous aimerions beaucoup ajouter une stack au CPU, ainsi que quelques caches pour rendre plus rapides les accès mémoire.
 
 # Processeur RISC-V
 
