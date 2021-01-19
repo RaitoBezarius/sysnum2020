@@ -88,6 +88,8 @@ Nous avons suivi la même approche que dans les ISA RISC et nous nous sommes don
 
 Ces registres spéciaux ont chacun une utilité, que nous allons détailler dans la sous-section suivante.
 
+De plus, nous avons un registre `pc`, mis à part. Dans notre CPU (cf plus loin), il est isolé physiquement et est modifié d'une façon totalement différentes des autres registres.
+
 ### Instructions
 
 Notre ISA a 8 instructions :
@@ -108,6 +110,7 @@ Notre ISA a 8 instructions :
 Ces instructions sont suffisantes pour les programmes qu'il est possible de faire fonctionner sur un CPU dans Minecraft. Il y a très peu d'instructions, ce qui est motivé par les difficultés techniques que nous avons évoquées plus haut : faire un CPU dans Minecraft capable de décoder et d'exécuter des dizaines d'instructions est une tâche assez titanesque, bien au-delà de nos moyens. Ainsi, nous avons réduit fortement le nombre d'instructions, tout en prenant parti de quelques registres spéciaux nous permettant astucieusement d'avoir plus d'instructions gratuitement :
 
 - NOP : comme dans RISC-V^[à ceci près qu'en RISC-V c'est un ADDI] : `ADD %0, %0, %0`
+-  SHIFT_LEFT : `ADD source, source, source`
 - SUB : Il suffit de faire un NOT suivi d'une incrémentation puis un ADD
 - PRINT : On peut afficher des mots à l'écran en écrivant aux bons endroits dans la RAM (cf plus loin)
 - JMP (inconditionnel) : il suffit d'utiliser le flag "toujours vrai"
@@ -120,6 +123,14 @@ De plus, il nous a semblé intéressant d'avoir un registre aléatoire built-in 
 ### Composition des mots
 
 Un point de divergence majeure avec RISC-V est la construction de nos instructions.
+
+Nous sommes dans un premier temps partis sur des instructions sur 16 bits, avec un segment pour l'opcode, 3 segments pour les codes registres, etc. mais il s'est avéré que cela allait être trop compliqué : fiare un décodeur d'instruction ainsi que beaucoup de plomberie relative à la gestion des différentes instructions possiblement attendues serait très (même 'trop') complexe^[mais pas impossible, ça a été fait par des gens totalement fous!] à faire dans Minecraft. Nous nous sommes donc rabattus sur un schéma d'instruction de 32 bits, avec une place réservée pour chaque donnée : il y a 3 bits attribués pour le contrôle de l'ALU, 1 bit pour l'incrémentation ou non du `pc`, etc.
+
+Au total, on utilise, pour l'instant, `27` bits par instruction (on a `5` bits non encore attribués qui pourront servir à d'éventuels futurs ajouts) :
+
+`| incr_pc : 1 | flag de jump : 2 | contrôle ALU : 3 | read1 : 4 | imm : 0:3 | write : 4 | imm : 4:7 | read2 : 4 | free space : 5 |`
+
+`read1`, `read2` et `write` sont les code des registres de lecture 1, lecture 2 et écriture. On remarque la chose suivante : une instruction qui n'a pas besoin d'écrire dans un registre (par exemple une écriture dans la RAM) peut tout de même déclencher, au niveau hardware, l'écriture dans les registres (pour éviter defaire beaucoup de plomberie qui désactive l'écriture quand il n'y a pas besoin). Il suffit de mettre `write = 0` pour que l'écriture se fasse dans `%0`, qui est de toute façon maintenu à `0`!
 
 ### Assembler
 
@@ -440,6 +451,12 @@ Dans la foulée, l'auteur a eu une bonne idée qui était, afin de gagner du tem
 Un début d'implémentation vague a été esquissé, perdu dans un stash git. Une autre idée aurait été de l'implémenter en software en C directement quitte à payer les pénalités de performance « juste pour voir », mais l'auteur trouvait ça honteux.
 
 Pas grand chose de plus pourrait être dit sans juste ré-expliquer ce qu'est une MMU.
+
+### VGA ou le retour aux GPU d'antan
+
+Nous nous sommes amusés à implémenter un petit contrôleur VGA, destiné à être placé à côté du core RISC-V et intégré comms slave Wishbone. Il a été conçu pour pouvoir afficher des matrices de caractères (avec un character set en bitmap) à une résolution de `640x480` lorsqu'implémenté sur le FPGA. La partie affichage le montre, comme en témoigne l'époustouflante image qui suit, mais le temps a manqué pour pouvoir intégrer le contrôleur au CPU. Il est donc resté à l'état de VGA standalone, ne pouvant servir qu'à afficher des slides de texte écrites à la compilation dans le FPGA.
+
+![Contrôleur VGA](./images/vga2.jpg)
 
 ## Des ailes d'acier à la brûlure: Verilator et Icarus Verilog
 
