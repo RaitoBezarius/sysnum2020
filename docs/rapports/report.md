@@ -220,6 +220,8 @@ Et voilà une horloge :
 
 ```
 
+**Remarque :** dans ce programme d'horloge, toutes les secondes ne durent pas autant de temps. Les secondes où une minute (et éventuellement une heure) est passée durent environ deux (trois) fois plus longtemps. Cela pourrait êrte résolu facilement en ajoutant des nop au début de la boucle des secondes. Cependant, pour que le temps moyen pris par notre CPU pour faire une seconde ne devienne pas démesuré, nous avons laissé le programme tel quel.
+
 ## Implémentation
 
 ### Principe général
@@ -309,6 +311,8 @@ temps.
 ### Achievements
 
 Au terme du projet, nous avons donc conçu une ISA et nous l'avons implémentée (même si ce n'est qu'en partie) dans Minecraft. Nous avons toutes les fonctionnalités de base pour faire tourner quelques petits programmes (assez petits pour tenir dans notre ROM de 128 instructions!)
+
+Nous avons une ROM d'horloge qui tourne dessus, bien sûr pas tout à fait à vitesse réelle (Environ `30` secondes réelles pour `1` seconde dans le programme).
 
 ### TODO
 
