@@ -92,7 +92,6 @@ Avec les instructions de base et les registres spéciaux :
 
 - NOP
 - SUB
-- HALT
 - PRINT
 - JMP (inconditionnel)
 - MOV

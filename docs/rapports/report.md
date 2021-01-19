@@ -23,7 +23,9 @@ Aussi, pour des raisons évidentes de performances, tout le monde n'est pas enti
 
 ### Redstone 101
 
-La redstone est une poudre que l'on peut placer au sol pour créer des circuits logiques. Un fil peut être "alimenté" ou non, ce qui correspond à l'état logique haut ou bas. L'état d'alimentation est en fait un peu plus compliqué que cela : un fil de redstone a 16 niveaux d'alimentation possibles. la portion du fil située juste à côté d'une source est alimentée au niveau 15, puis la puissance décroît d'un niveau par bloc (donc un fil de redstone pert sa puissance au bout de 15 blocs^[D'où l'usage de répéteurs])
+La redstone est une poudre que l'on peut placer au sol pour créer des circuits logiques. Un fil peut être "alimenté" ou non, ce qui correspond à l'état logique haut ou bas. L'état d'alimentation est en fait un peu plus compliqué que cela : un fil de redstone a 16 niveaux d'alimentation possibles. la portion du fil située juste à côté d'une source est alimentée au niveau 15, puis la puissance décroît d'un niveau par bloc (donc un fil de redstone pert sa puissance au bout de 15 blocs^[D'où l'usage de répéteurs]). 
+
+![fil de redstone; la puissance décroît](./images/redstone_line.png)
 
 Nous avons plusieurs éléments intéressants dans le jeu :
 
@@ -31,17 +33,87 @@ Nous avons plusieurs éléments intéressants dans le jeu :
 - torche de redstone : peut alimenter des fils. Mais si elle est elle-même alimentée par une autre source, elle s'éteint -> porte NOT primitive
 - répéteur : permet de booster la puissance d'un fil : si le fil en entrée a une puissance d'au moins 1, la puissance en sortie sera de 15 (sinon, elle sera nulle). Le répéteur sert aussi de diode ou de registre à décalage.
 
-La redstone est par construction un circuit logique synchrone : (tout comme le reste de ce qui se passe dans un monde Minecraft) l'état des différents composants de redstone est calculé^[Lorsque les performances du serveur le permettent] `10` fois par seconde (on parle de `10` 'ticks' par seconde). 
+![fil; torche; répéteur](./images/composants.png)
 
+\newpage
 
+La redstone est par construction un circuit logique synchrone : (tout comme le reste de ce qui se passe dans un monde Minecraft) l'état des différents composants de redstone est calculé^[Lorsque les performances du serveur le permettent] `10` fois par seconde (on parle de `10` 'ticks' par seconde). La propagation de l'alimentation dans un fil de redstone est instantanée (`i.e.` elle est entièrement calculée durant un seul tick).
+
+Voilà un exemple de porte AND faite en redstone :
+
+\newpage
+
+![porte AND](./images/OR_gate.png)
+
+NB : Il y en a deux versions. Celle de gauche n'a qu'une seule entrée allumée, celle de droite a les deux.
+
+Le principe est assez simple : Chaque entrée alimente une torche de redstone. Ces deux torches (appelons-les T0 et T1) alimentent, ensemble, une même torche (T2), qui, elle, alimente la sortie. Lorsque qu'au moins une des entrée est éteinte, T0 ou T1 n'est pas alimentée, donc est allumée. Donc elle alimente T2, qui est donc éteinte, résultant en une sortie éteitne.
+
+À l'inverse, si les deux entrées sont alimentées, T0 et T1 sont éteintes (car toutes les deux alimentées). Donc T2 n'est plus alimentée, donc est allumée et la sortie est alimentée.
+
+Les répéteurs sont un élément fondamental de la logique redstone : ils permettent d'induire un délai dans la propagation de signaux de redstone. En effet, la sortie d'un répéteur a `1`^[ou 2 ou 4 selon la configuration] tick de retard sur l'entrée.
+
+On peut faire facilement une clock à `1` tick avec deux répéteurs :
+
+![repeater clock](./images/repeaters.png)
+
+## Difficultés techniques
+
+Dès le dabut, il nous a apparu clair que toutes les difficultés dans ce projet ne résidaient pas dans la conception théorique du CPU (car c'est un CPU très simple, proche des exemples présentés en cours/TD) mais bien dans l'implémentation pratique dans Minecraft, et cele pour plusieurs raisons :
+
+- Les fils de redstone perdent `1` de puissance tous les blocs et les repeaters ajoutent au moins `1` tick de délai. De qui fait que chaque `160` blocs parcourus par un signal prend `1` seconde. À l'échelle du CPU entier, nous pouvions donc nous retrouver avec des dizaines de secondes par instruction liées uniquement au temps de propagation des signaux dans les fils (on ne parle même pas encore de logique, là!)
+- Minecraft est un jeu très mal programmé et la redstone ne fait pas exception... Il y a beaucoup de bugs (des éléments qui restent dans un état alimentés alors qu'il devraient être éteints, etc.) qui rendent très compliquée la tâche de faire un CPU assez petit pour éviter de prendre plus de 30 secondes par cycle! Il y a même des bugs qui ont lieu ou pas selon l'orientation des composants où même leur position dans le monde...
+- Chaque bloc doit être posé à la main^[Nous avons des outils pour dupliquer des portions du monde, mais nous devons tout de même faire beaucoup de placement manuel!], donc n'importe quel petit composant de logique peut prendre beaucoup de temps à placer. Cela limite grandement la compléxité du CPU que nous avons fait.
 
 ## ISA
 
 ### Buts recherchés
 
+Nous sommes partis sur une ISSA très minimaliste et simple, avec le moins possible d'instructions. Nous nous sommes fondés sur l'ISA `RVI` pour former notre ISA : V-RISC-V (Very Reducd Instruction Set Computer -V). Ce nombre très réduit d'instructions nous a aidés à implémenter le CPU dans Minecraft.
+
+De façon générale voilà les specs de l'ISA :
+
+- entiers sur 8 bits
+- instruction sur 32 bits
+- opérations d'arithmétique entière et logique bit-à-bit
+
 ### Registres
 
+Nous avons suivi la même approche que dans les ISA RISC et nous nous sommes donnés `16` registres *general purpose* : `%0` à `%15`. Sur ces `16`, `13` sont vraiment des registres génériques et nous avons trois registres spéciaux :
+
+- `%0 = 0` → NOP
+- `%1 = -1` → NOT
+- `%15 = random(0, 255)`
+
+Ces registres spéciaux ont chacun une utilité, que nous allons détailler dans la sous-section suivante.
+
 ### Instructions
+
+Notre ISA a 8 instructions :
+
+- STORE
+- LOAD
+- ADD
+- OR
+- XOR
+- LOADI
+- JMP conditionnel avec plusieurs flags possibles :
+    * JOF : jump si overflow sur l'ALU
+    * JNEG : jump si le résultat de l'ALU est négatif
+    * JZ : jump si le résultat de l'ALU est nul
+    * JMP : jump sans condition
+
+Ces instructions sont suffisantes pour les programmes qu'il est possible de faire fonctionner sur un CPU dans Minecraft. Il y a très peu d'instructions, ce qui est motivé par les difficultés techniques que nous avons évoquées plus haut : faire un CPU dans Minecraft capable de décoder et d'exécuter des dizaines d'instructions est une tâche assez titanesque, bien au-delà de nos moyens. Ainsi, nous avons réduit fortement le nombre d'instructions, tout en prenant parti de quelques registres spéciaux nous permettant astucieusement d'avoir plus d'instructions gratuitement :
+
+- NOP : comme as RISC-V^[à ceci près qu'en RISC-V c'est un ADDI] : ADD %0, %0, %0
+- SUB : Il suffit de faire un NOT suivi d'une incrémentation
+- PRINT : On peut afficher des mots à l'écran en écrivant aux bonns endroits dans la RAM (cf plus loin)
+- JMP (inconditionnel) : il suffit d'utiliser le flag "toujours vrai"
+- MOV : On fait un `ADD source, %0, destination`
+- NOT : `XOR source, %1, destination`
+- CMP : `ADD op1, op2, %0`. Cela permet de positionner les flags sans écrire dans un registre le résultat
+
+De plus, il nous a semblé intéressant d'avoir un registre aléatoire built-in : Cela permet de faire des programmes rigolo, comme l'approximation de Pi par Monte-Carlo, en utilisant une 'primitive' de RNG hardware, donc en un cycle, plutôt que de faire un générateur congruentiel en software, qui serait horriblement lent.
 
 ### Composition des mots
 
