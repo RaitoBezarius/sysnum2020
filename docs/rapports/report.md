@@ -88,6 +88,8 @@ Nous avons suivi la même approche que dans les ISA RISC et nous nous sommes don
 
 Ces registres spéciaux ont chacun une utilité, que nous allons détailler dans la sous-section suivante.
 
+De plus, nous avons un registre `pc`, mis à part. Dans notre CPU (cf plus loin), il est isolé physiquement et est modifié d'une façon totalement différentes des autres registres.
+
 ### Instructions
 
 Notre ISA a 8 instructions :
@@ -120,6 +122,14 @@ De plus, il nous a semblé intéressant d'avoir un registre aléatoire built-in 
 ### Composition des mots
 
 Un point de divergence majeure avec RISC-V est la construction de nos instructions.
+
+Nous sommes dans un premier temps partis sur des instructions sur 16 bits, avec un segment pour l'opcode, 3 segments pour les codes registres, etc. mais il s'est avéré que cela allait être trop compliqué : fiare un décodeur d'instruction ainsi que beaucoup de plomberie relative à la gestion des différentes instructions possiblement attendues serait très (même 'trop') complexe^[mais pas impossible, ça a été fait par des gens totalement fous!] à faire dans Minecraft. Nous nous sommes donc rabattus sur un schéma d'instruction de 32 bits, avec une place réservée pour chaque donnée : il y a 3 bits attribués pour le contrôle de l'ALU, 1 bit pour l'incrémentation ou non du `pc`, etc.
+
+Au total, on utilise, pour l'instant, `27` bits par instruction (on a `5` bits non encore attribués qui pourront servir à d'éventuels futurs ajouts) :
+
+`| incr_pc : 1 | flag de jump : 2 | contrôle ALU : 3 | read1 : 4 | imm : 0:3 | write : 4 | imm : 4:7 | read2 : 4 | free space : 5 |`
+
+`read1`, `read2` et `write` sont les code des registres de lecture 1, lecture 2 et écriture. On remarque la chose suivante : une instruction qui n'a pas besoin d'écrire dans un registre (par exemple une écriture dans la RAM) peut tout de même déclencher, au niveau hardware, l'écriture dans les registres (pour éviter defaire beaucoup de plomberie qui désactive l'écriture quand il n'y a pas besoin). Il suffit de mettre `write = 0` pour que l'écriture se fasse dans `%0`, qui est de toute façon maintenu à `0`!
 
 ### Assembler
 
