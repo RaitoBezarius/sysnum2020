@@ -110,6 +110,7 @@ Notre ISA a 8 instructions :
 Ces instructions sont suffisantes pour les programmes qu'il est possible de faire fonctionner sur un CPU dans Minecraft. Il y a très peu d'instructions, ce qui est motivé par les difficultés techniques que nous avons évoquées plus haut : faire un CPU dans Minecraft capable de décoder et d'exécuter des dizaines d'instructions est une tâche assez titanesque, bien au-delà de nos moyens. Ainsi, nous avons réduit fortement le nombre d'instructions, tout en prenant parti de quelques registres spéciaux nous permettant astucieusement d'avoir plus d'instructions gratuitement :
 
 - NOP : comme dans RISC-V^[à ceci près qu'en RISC-V c'est un ADDI] : `ADD %0, %0, %0`
+-  SHIFT_LEFT : `ADD source, source, source`
 - SUB : Il suffit de faire un NOT suivi d'une incrémentation puis un ADD
 - PRINT : On peut afficher des mots à l'écran en écrivant aux bons endroits dans la RAM (cf plus loin)
 - JMP (inconditionnel) : il suffit d'utiliser le flag "toujours vrai"
