@@ -257,7 +257,7 @@ permet de pipeliner plus facilement.
 
 Pour le moment, on intercale des latchs entre les modules. Cela permet d'éviter
 que tout foire si un des environ trois mille repeater n'est pas sur le bon
-délai. Les délais sont pour le moment relativement conservatif.
+délai (expérience vécu). Les délais sont pour le moment relativement conservatif.
 
 #### ALU
 La version initiale de l'ALU bien que très compacte était très lente (environ
@@ -280,6 +280,9 @@ permet de faire un AND.
 
 On voulait aussi rajouter un barrel shifter.
 
+L'ALU est même synchronisé à l'intérieur, on pourrait envoyer une opérations
+tout les un ou deux ticks.
+
 Les drapeaux sont implémentés par des registres à décalage et non des registres
 classiques.
 
@@ -294,17 +297,50 @@ On a fait plusieurs prototypes de ROM. Initialement on pensait utiliser une RAM
 sans la partie écritue. Il s'avère que cela est trop gros et trop lent pour 128
 mots ROM.
 
-#### Registres
-On utilise des registrse à double lecture. Cela permet de gagner beaucoup de
-temps.
+La ROM finale est rapide (1.4 secondes en comptant le décodage de l'adresse) et synchronisé.
+
+### Registres
+On utilise des registres à double lecture. Cela permet de gagner beaucoup de
+temps. Il est possible de faire en sorte que un bit prenne 2 par 2 par
+quelquechose blocs. Mais il n'est (à mon avis) pas possible de faire plus
+compact (en gardant de bonne performances) ou de ne pas dupliquer les données.
+En effet, afin d'être dual read on dédouble le stockage des informations.
+
+Le lecture des registres prend 1 seconde pour l'écriture et 0.7 seconde pour la
+lecture (en
+incluant le temps de décodage des l'adresses).
 
 #### RAM
+On a fait plein de version de la RAM. La dernière en date des rapide mais
+surtout très compacte " un bloc par deux blocs par quelquechose. On ne peut pas
+faire plus compact (sauf dans la direction quelquechose) avec une RAM utilisant les buds de pistons.
 
 #### Écran
+On dispose de 6 écrans hexadécimaux. On n'a pas encore testé le système
+d'écritue dans la mémoire des écrans. Tout cela est lent en non synchronisé.
+Cela n'est pas très très grave car le CPU est lent (une opération tout les 5
+secondes) donc on met à jour un écran au plus toutes les environ 20 secondes.
 
 #### Unité de controlle
+L'unité de controlle gère le pc et les paramètres de l'ALU.
+Incrémenter le pc se fait avec un adder modifié avec une entrée toujours à zéro et la retenue entrante toujours à un.
+Un latch garde en mémoire le pc. L'unité de controlle décide si on met à jour
+le pc avec la valeur sur le bus principal (sortie de l'ALU ou valeur immédiate)
+ou avec la sortie de l'additionneur du pc (c'est-à-dire pc + 1).
+
+#### Horloge
+Une horloge est propagé dans le circuit. Elle permet de déclencher les latch au
+bon moment.
 
 ### Plomberie
+Toute la difficulté est justement de régler les repeaters pour avoir les bons
+délais. Un effort à été fait pour avoir des bus assez propres et un bon
+placement des modules.
+
+Il est quasiment impossible de débug. On n'a pas d'oscilloscope, on ne peut pas
+faire tourner l'horloge plus lentement, on ne peut pas afficher la valeur des
+registre. Il est même difficile de savoir si deux signaux arrive en même
+temps.
 
 ## Conlusion
 
