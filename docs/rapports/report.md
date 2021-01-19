@@ -201,6 +201,30 @@ Ceci a aussi demandé d'implémenter une petite machine à états dans l'étage 
 
 ## De l'art d'exceller à 1, 2, 3, soleil: Mécanismes d'interruptions
 
+Nous avions besoins d'un système d'interruptions, à la fois pour pouvoir réagir
+au monde extérieur et pour permettre des _software interrupts_ pour implémenter
+des modes priviligiés sur notre processeur.
+
+L'idée était de faire quelque chose d'assez simple quitte à ce que ce soit lent.
+Le système d'interruptions standard de RISC-V demande plusieurs écriture
+à la fois dans la mémoire du processeur il nous semblait qu'implémenter cela
+mènerait à avoir de la logique d'interruption beaucoup plus compliquée que la
+logique du processeur.
+
+En nous inspirant de _zipcpu_, nous avons implémenté ce que nous appelons
+un « mode dual » pour notre processeur. L'idée est que lors d'une interruption,
+on passe en mode dual, qui donne accès à un nouvel ensemble de registres et
+un nouvel espace mémoire (en particulier les registres du mode normal sont
+memory mapped), et on s'occupe _côté logiciel_ de servir l'interruption.
+
+Le mode dual nous permet donc d'implémenter _côté logiciel_ la logique
+de gestion des interruptions que nous aurions normalement dû implémenter
+physiquement.
+
+> Le standard RISC-V encourage d'ailleurs les implémentations simples à
+> gérer les instructions plus complexes (comme celles qui touchent aux CSRs,
+> donc à l'architecture privilégiée) avec des TRAPs.
+
 ## De l'art de mentir vite et bien: Caches L1, MMU et Wish(bone)
 
 Puisque on nous a dit de pas le faire, nous avons malgré tout essayé, puis c'était très formateur et requis pour Linux.
