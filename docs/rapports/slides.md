@@ -27,7 +27,7 @@ Le projet se divise en deux sous-projets :
 
 > - Fonctionnalités principales du processeur: extensions, entrées-sorties
 > - Prototypes
-> - Caches, MMU 
+> - Caches, MMU
 > - Wishbone
 > - Vérification formelle avec SymbiYosys
 > - Contrôleur VGA
@@ -96,7 +96,7 @@ Avec les instructions de base et les registres spéciaux :
 - PRINT
 - JMP (inconditionnel)
 - MOV
-- NOT 
+- NOT
 - CMP
 
 ## Registres
@@ -121,7 +121,28 @@ On a un assembler de notre ASM vers des commandes MC permettant de programmer de
 
 
 
-## Aspects techniques
+## Importation de la ROM
+
+![](./images/gen.png)
+
+## Prototypes 1/4
+![](./images/overview1.png)
+
+## Prototypes 2/4
+![](./images/overview2.png)
+
+## Prototypes 3/4
+![](./images/overview3.png)
+
+## Prototypes 4/4
+![](./images/overview4.png)
+
+## Plomberie
+![](./images/cpus.png)
+
+## V-RISC-C core
+![](./images/v-risc-v-core.png)
+
 
 ## Laines
 
@@ -140,7 +161,7 @@ CPU V-RISC-V avec ROM, registres, ALU, instructions arithmétiques et logiques.
 
 . . .
 
-**TODO :** 
+**TODO :**
 
 RAM, I/O utilisateur^[O : afficheurs 7-segments; I : sélecteurs à leviers], découpage de l'espace mémoire, pipeline^[En fait déjà presque possible...]
 
