@@ -105,7 +105,7 @@ Notre ISA a 8 instructions :
 
 Ces instructions sont suffisantes pour les programmes qu'il est possible de faire fonctionner sur un CPU dans Minecraft. Il y a très peu d'instructions, ce qui est motivé par les difficultés techniques que nous avons évoquées plus haut : faire un CPU dans Minecraft capable de décoder et d'exécuter des dizaines d'instructions est une tâche assez titanesque, bien au-delà de nos moyens. Ainsi, nous avons réduit fortement le nombre d'instructions, tout en prenant parti de quelques registres spéciaux nous permettant astucieusement d'avoir plus d'instructions gratuitement :
 
-- NOP : comme as RISC-V^[à ceci près qu'en RISC-V c'est un ADDI] : ADD %0, %0, %0
+- NOP : comme as RISC-V^[à ceci près qu'en RISC-V c'est un ADDI] : `ADD %0, %0, %0`
 - SUB : Il suffit de faire un NOT suivi d'une incrémentation
 - PRINT : On peut afficher des mots à l'écran en écrivant aux bonns endroits dans la RAM (cf plus loin)
 - JMP (inconditionnel) : il suffit d'utiliser le flag "toujours vrai"
@@ -115,7 +115,8 @@ Ces instructions sont suffisantes pour les programmes qu'il est possible de fair
 
 De plus, il nous a semblé intéressant d'avoir un registre aléatoire built-in : Cela permet de faire des programmes rigolo, comme l'approximation de Pi par Monte-Carlo, en utilisant une 'primitive' de RNG hardware, donc en un cycle, plutôt que de faire un générateur congruentiel en software, qui serait horriblement lent.
 
-### Composition des mots
+### Composition des mots++
+
 
 ## Implémentation
 
