@@ -53,13 +53,13 @@ Le principe est assez simple : Chaque entrée alimente une torche de redstone. C
 
 Les répéteurs sont un élément fondamental de la logique redstone : ils permettent d'induire un délai dans la propagation de signaux de redstone. En effet, la sortie d'un répéteur a `1`^[ou 2 ou 4 selon la configuration] tick de retard sur l'entrée.
 
-On peut faire facilement une clock à `1` tick avec deux répéteurs :
+On peut par exemple faire facilement une clock à `1` tick avec deux répéteurs.
 
 ![repeater clock](./images/repeaters.png)
 
 ## Difficultés techniques
 
-Dès le dabut, il nous a apparu clair que toutes les difficultés dans ce projet ne résidaient pas dans la conception théorique du CPU (car c'est un CPU très simple, proche des exemples présentés en cours/TD) mais bien dans l'implémentation pratique dans Minecraft, et cele pour plusieurs raisons :
+Dès le début, il nous a apparu clair que toutes les difficultés dans ce projet ne résidaient pas dans la conception théorique du CPU (car c'est un CPU très simple, proche des exemples présentés en cours/TD) mais bien dans l'implémentation pratique dans Minecraft, et cela pour plusieurs raisons :
 
 - Les fils de redstone perdent `1` de puissance tous les blocs et les repeaters ajoutent au moins `1` tick de délai. De qui fait que chaque `160` blocs parcourus par un signal prend `1` seconde. À l'échelle du CPU entier, nous pouvions donc nous retrouver avec des dizaines de secondes par instruction liées uniquement au temps de propagation des signaux dans les fils (on ne parle même pas encore de logique, là!)
 - Minecraft est un jeu très mal programmé et la redstone ne fait pas exception... Il y a beaucoup de bugs (des éléments qui restent dans un état alimentés alors qu'il devraient être éteints, etc.) qui rendent très compliquée la tâche de faire un CPU assez petit pour éviter de prendre plus de 30 secondes par cycle! Il y a même des bugs qui ont lieu ou pas selon l'orientation des composants où même leur position dans le monde...
@@ -69,17 +69,18 @@ Dès le dabut, il nous a apparu clair que toutes les difficultés dans ce projet
 
 ### Buts recherchés
 
-Nous sommes partis sur une ISSA très minimaliste et simple, avec le moins possible d'instructions. Nous nous sommes fondés sur l'ISA `RVI` pour former notre ISA : V-RISC-V (Very Reducd Instruction Set Computer -V). Ce nombre très réduit d'instructions nous a aidés à implémenter le CPU dans Minecraft.
+Nous sommes partis sur une ISA très minimaliste et simple, avec le moins possible d'instructions. Nous nous sommes fondés sur l'ISA `RV8I` pour former notre ISA : V-RISC-V (Very Reducd Instruction Set Computer -V). Le nombre très réduit d'instructions nous a aidés à implémenter le CPU dans Minecraft.
 
-De façon générale voilà les specs de l'ISA :
+De façon générale, voilà les specs de l'ISA :
 
 - entiers sur 8 bits
 - instruction sur 32 bits
 - opérations d'arithmétique entière et logique bit-à-bit
+- ROM et RAM séparées
 
 ### Registres
 
-Nous avons suivi la même approche que dans les ISA RISC et nous nous sommes donnés `16` registres *general purpose* : `%0` à `%15`. Sur ces `16`, `13` sont vraiment des registres génériques et nous avons trois registres spéciaux :
+Nous avons suivi la même approche que dans les ISA RISC et nous nous sommes donnés `16` registres *general purpose* sur 8 bits : `%0` à `%15`. Sur ces `16`, `13` sont vraiment des registres génériques et nous avons trois registres spéciaux :
 
 - `%0 = 0` → NOP
 - `%1 = -1` → NOT
@@ -103,20 +104,110 @@ Notre ISA a 8 instructions :
     * JZ : jump si le résultat de l'ALU est nul
     * JMP : jump sans condition
 
+
 Ces instructions sont suffisantes pour les programmes qu'il est possible de faire fonctionner sur un CPU dans Minecraft. Il y a très peu d'instructions, ce qui est motivé par les difficultés techniques que nous avons évoquées plus haut : faire un CPU dans Minecraft capable de décoder et d'exécuter des dizaines d'instructions est une tâche assez titanesque, bien au-delà de nos moyens. Ainsi, nous avons réduit fortement le nombre d'instructions, tout en prenant parti de quelques registres spéciaux nous permettant astucieusement d'avoir plus d'instructions gratuitement :
 
-- NOP : comme as RISC-V^[à ceci près qu'en RISC-V c'est un ADDI] : `ADD %0, %0, %0`
-- SUB : Il suffit de faire un NOT suivi d'une incrémentation
-- PRINT : On peut afficher des mots à l'écran en écrivant aux bonns endroits dans la RAM (cf plus loin)
+- NOP : comme dans RISC-V^[à ceci près qu'en RISC-V c'est un ADDI] : `ADD %0, %0, %0`
+- SUB : Il suffit de faire un NOT suivi d'une incrémentation puis un ADD
+- PRINT : On peut afficher des mots à l'écran en écrivant aux bons endroits dans la RAM (cf plus loin)
 - JMP (inconditionnel) : il suffit d'utiliser le flag "toujours vrai"
 - MOV : On fait un `ADD source, %0, destination`
 - NOT : `XOR source, %1, destination`
 - CMP : `ADD op1, op2, %0`. Cela permet de positionner les flags sans écrire dans un registre le résultat
 
-De plus, il nous a semblé intéressant d'avoir un registre aléatoire built-in : Cela permet de faire des programmes rigolo, comme l'approximation de Pi par Monte-Carlo, en utilisant une 'primitive' de RNG hardware, donc en un cycle, plutôt que de faire un générateur congruentiel en software, qui serait horriblement lent.
+De plus, il nous a semblé intéressant d'avoir un registre aléatoire built-in : Cela permet de faire des programmes rigolos, comme l'approximation de Pi par Monte-Carlo, en utilisant une 'primitive' de RNG hardware, donc faite en un cycle, plutôt que de faire un générateur congruentiel en software, qui serait horriblement lent.
 
-### Composition des mots++
+### Composition des mots
 
+Un point de divergence majeure avec RISC-V est la construction de nos instructions.
+
+### Assembler
+
+Nous avons implémenté un assembler basique pour transpiler nos programmes en ASM custom vers du langage machine V-RISC-V.
+
+Par exemple, voilà un programme en ASM pour calculer $\frac{6}{\pi^2}$ par une approximation de la probabilité que deux entiers soient premiers entre eux :
+
+```asm
+.main
+	mv %1 %5
+	mv %0 %6
+	loadi 1 %7
+.rand
+	add %0 %5 %0
+	jz print
+	add %1 %5 %5
+	mv %15 %2
+	mv %15 %3
+.euclide
+	sub %2 %3 %0
+	jz proba
+	sub %2 %3 %0
+	jneg case2
+	sub %2 %3 %2
+	jmp euclide
+.case2
+	sub %3 %2 %3
+	jmp euclide
+.proba
+	add %1 %3 %0
+	jz relatively_prime
+	jmp rand
+.relatively_prime
+	add %7 %6 %6
+	jmp rand
+.print
+	print %6 0
+	halt
+```
+
+Et voilà une horloge :
+
+```asm
+.init
+	loadi 0 %2 # Seconds.
+	loadi 0 %3 # Minutes.
+	loadi 0 %4 # Hours.
+	loadi 1 %5
+	loadi 59 %6
+	loadi 23 %7
+.print_hour
+	print %2 0
+.print_min
+	print %3 1
+.print_sec
+	print %4 2
+.sec
+	# Add a second.
+	add %5 %2 %2
+	# Check if there is a roll over.
+	sub %6 %2 %0
+	jneg min
+	# Update the screen and loop.
+	jmp print_sec
+.min
+	# Reset the seconds.
+	loadi 0 %2
+	# Add a minute.
+	add %5 %3 %3
+	# Check if there is a roll over.
+	sub %6 %2 %0
+	jneg hour
+	# Update the screen and loop.
+	jmp print_min
+.hour
+	# Reset the minutes.
+	loadi 0 %3
+	# Add an hour.
+	add %5 %4 %4
+	# Check if there is a roll over.
+	sub %7 %2 %0
+	jneg halt
+	# Update the screen and loop.
+	jmp print_hour
+.halt
+	jmp halt
+
+```
 
 ## Implémentation
 
