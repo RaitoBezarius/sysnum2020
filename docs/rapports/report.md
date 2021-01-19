@@ -409,6 +409,12 @@ Un début d'implémentation vague a été esquissé, perdu dans un stash git. Un
 
 Pas grand chose de plus pourrait être dit sans juste ré-expliquer ce qu'est une MMU.
 
+### VGA ou le retour aux GPU d'antan
+
+Nous nous sommes amusés à implémenter un petit contrôleur VGA, destiné à être placé à côté du core RISC-V et intégré comms slave Wishbone. Il a été conçu pour pouvoir afficher des matrices de caractères (avec un character set en bitmap) à une résolution de `640x480` lorsqu'implémenté sur le FPGA. La partie affichage le montre, comme en témoigne l'époustouflante image qui suit, mais le temps a manqué pour pouvoir intégrer le contrôleur au CPU. Il est donc resté à l'état de VGA standalone, ne pouvant servir qu'à afficher des slides de texte écrites à la compilation dans le FPGA.
+
+![Contrôleur VGA](./images/vga2.jpg)
+
 ## Des ailes d'acier à la brûlure: Verilator et Icarus Verilog
 
 Au début, nous utilisions Icarus Verilog, qui a permis de rapidement tester
