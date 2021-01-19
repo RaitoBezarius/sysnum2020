@@ -14,9 +14,26 @@ lang: fr
 ## Introduction et motivations
 
 ### Minecraft
-Minecraft est un jeu vidéo de type "sandbox" formé presqu'uniquement de cubes. 
+
+Minecraft est un jeu vidéo de type "sandbox" formé (presque) entièrement de cubes, que l'on peut miner et poser à volonté^[selon le mode de jeu, mais ceci est beyond the scope of ce rapport]. Le bloc (=cube) est l'unité prindipale du jeu, mesure de l'ordre de 1 mètre (si on supposse que le personnage mesure 1.80m). On joue à Minecraft dans des "mondes", générés procéduralement (à grand renfort de bruit de Perlin) et mesurant 60M * 60M * 256 blocs. 
+
+Bien sûr, un monde n'est pas entièrement généré à sa création, d'une part parceque le fichier serait gigantesque, d'autre part parce qu'un monde de 60M*60M blocs (horizontalement) est absolument immense, seul une infime portion serait en pratique utilisée par les joueurs. Le monde est donc généré à la volée lorsque des joueurs s'aventurent dans des portions encore inconnues du monde. 
+
+Aussi, pour des raisons évidentes de performances, tout le monde n'est pas entièrement chargé^[par "chargé", on entend que les animaux, monstres, la gravité, les méchanismes, etc. sont calculés, par opposition à "déchargé" qui signifie que la portion du monde en question est figée] à tout moment. À un moment donné, seule une portion du monde correspondant à un disque de rayon ~ 160 blocs autour de chaque joueur est chargée. Ceci limite donc la taille des circuits que nous pouvons créer : si un circuit est plus grand que 320 blocs, il se pourrait que des zones de ce dernier se retrouvent déchargées (donc figées) tandis que d'autre zones sont chargées. Cela peut conduire à des comportements inattendus!
 
 ### Redstone 101
+
+La redstone est une poudre que l'on peut placer au sol pour créer des circuits logiques. Un fil peut être "alimenté" ou non, ce qui correspond à l'état logique haut ou bas. L'état d'alimentation est en fait un peu plus compliqué que cela : un fil de redstone a 16 niveaux d'alimentation possibles. la portion du fil située juste à côté d'une source est alimentée au niveau 15, puis la puissance décroît d'un niveau par bloc (donc un fil de redstone pert sa puissance au bout de 15 blocs^[D'où l'usage de répéteurs])
+
+Nous avons plusieurs éléments intéressants dans le jeu :
+
+- poudre de redstone : pour faire des fils
+- torche de redstone : peut alimenter des fils. Mais si elle est elle-même alimentée par une autre source, elle s'éteint -> porte NOT primitive
+- répéteur : permet de booster la puissance d'un fil : si le fil en entrée a une puissance d'au moins 1, la puissance en sortie sera de 15 (sinon, elle sera nulle). Le répéteur sert aussi de diode ou de registre à décalage.
+
+La redstone est par construction un circuit logique synchrone : (tout comme le reste de ce qui se passe dans un monde Minecraft) l'état des différents composants de redstone est calculé^[Lorsque les performances du serveur le permettent] `10` fois par seconde (on parle de `10` 'ticks' par seconde). 
+
+
 
 ## ISA
 
