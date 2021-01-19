@@ -682,13 +682,17 @@ always @(posedge clk) begin
     end
 
 	if(wb_op == WB_JUMP) begin
+    `ifdef CPU_DEBUG
 		$display("%d: jump to %d", $time, next_pc);
+    `endif
 	end
 
 	case(wb_op)
 		WB_WRITE: begin
 			registers[id_mode][wb_rd] <= wb_res;
+      `ifdef CPU_DEBUG
 			$display("%d: r%d <- %d", $time, wb_rd, wb_res);
+      `endif
 		end
         WB_TRAP : begin
             // we already prepared pc and id_mode

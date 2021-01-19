@@ -21,6 +21,14 @@ test: targets
 	$(eval TESTBED_SIM_SOURCE = src/rtl/sim/mem_testbed.cpp)
 	$(eval TESTBED_EXECUTABLE = mem_simulation)
 
+.USE_CLOCK_TESTBED:
+	$(eval TESTBED_SOURCE = src/rtl/clockbed.sv)
+	$(eval TESTBED_SIM_SOURCE = src/rtl/sim/clockbed.cpp)
+	$(eval TESTBED_EXECUTABLE = clock)
+
+test-clock: .USE_CLOCK_TESTBED targets
+	cd $(BUILDDIR) && ./$(TESTBED_EXECUTABLE) $(SIMULATOR-FLAGS)
+
 test-memory: .USE_MEMORY_TESTBED targets
 	cd $(BUILDDIR) && ./$(TESTBED_EXECUTABLE) $(SIMULATOR-FLAGS)
 

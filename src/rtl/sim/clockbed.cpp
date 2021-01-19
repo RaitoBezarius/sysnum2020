@@ -2,17 +2,19 @@
 #include <stdlib.h>
 #include <iostream>
 #include <ctime>
+#include <unistd.h>
 
 #include "verilated.h"
-#include "Vtestbed.h"
+#include "Vclockbed.h"
 #include "testbench.hpp"
+
 
 using namespace std;
 
 #define EPOCH 0x7ffec
-#define INCREMENT_NOW 0x5000
+#define INCREMENT_NOW 0x7ffe8
 
-clock_t start;
+clock_t start, start2;
 vluint64_t main_time = 0;       // Current simulation time
 double sc_time_stamp() {
     return static_cast<double>(main_time);
@@ -27,14 +29,15 @@ double tac() {
     return (clock() - start) / (double)CLOCKS_PER_SEC;
 }
 
-vluint32_t read_ram_int(Vtestbed* mod, vluint32_t addr) {
-    return mod->__DOT_bram_DOT__ram[addr];
+
+vluint32_t read_ram_int(Vclockbed* mod, vluint32_t addr) {
+    return mod->clockbed__DOT__bram__DOT__ram[addr];
 }
 
-/*
-void write_ram_int(Vtestbed* mod, vluint32_t addr, vluint32_t value) {
-    mod->RAM[addr] = value;
-}*/
+
+void write_ram_int(Vclockbed* mod, vluint32_t addr, vluint32_t value) {
+    mod->clockbed__DOT__bram__DOT__ram[addr] = value;
+}
 
 
 bool parseArg(std::string const& arg, std::string const& prefix,
@@ -64,8 +67,8 @@ int main(int argc, char **argv) {
         }
     }
 
-    Vtestbed* vlog = new Vtestbed;
-    Testbench<Vtestbed> tb(
+    Vclockbed* vlog = new Vclockbed;
+    Testbench<Vclockbed> tb(
             &main_time,
             vlog,
             nTicks,
@@ -78,19 +81,22 @@ int main(int argc, char **argv) {
     vluint32_t last_epoch = 0;
     vluint32_t cur_epoch = 0;
 
-    clock_t seconds_counter = clock();
     while (!tb.done()) {
         tic();
         tb.tick();
-        avg_tick_delay += tac()/(double)nTicks;
+        double elapsed = tac();
+        avg_tick_delay += elapsed/(double)nTicks;
         cur_epoch = read_ram_int(vlog, EPOCH);
         if (last_epoch != cur_epoch) {
             cout << "Seconds: " << cur_epoch << endl;
             last_epoch = cur_epoch;
         }
         // If a second elapsed, just assert increment now.
-        if (enableRealtimeMode && (clock() - seconds_counter) / (double)CLOCKS_PER_SEC >= 1) {
-            //write_ram_int(vlog, INCREMENT_NOW, 1);
+        if (enableRealtimeMode) {
+            if (elapsed <= 0.2) {
+                usleep((unsigned int)((0.2 - elapsed)*1000000));
+            }
+            //cout << "elapsed: " << tac() << " secs" << endl;
         }
     }
 
