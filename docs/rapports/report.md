@@ -235,13 +235,55 @@ Le processeur est décomposé en plusieurs modules :
 - Écran
 - Unité de controlle
 
-Caractéristiques des modules.
+Caractéristiques des modules :
+- Les modules sont très compacts.
+- Les modules sont assez rapide.
+- Les modules les plus important sont synchronisé : tout les chemins sont
+critiques. Cela simplifie énormément l'interface avec les autres modules et
+permet de pipeliner plus facilement.
+
+Pour le moment, on intercale des latchs entre les modules. Cela permet d'éviter
+que tout foire si un des environ trois mille repeater n'est pas sur le bon
+délai. Les délais sont pour le moment relativement conservatif.
 
 #### ALU
+La version initiale de l'ALU bien que très compacte était très lente (environ
+7secondes pour une addition). Pour faire des ALU pas  trop lent en minecraft il
+faut utiliser les spécificités de minecraft. Ainsi dans la version finale de
+l'additionneur on utilise une tour de slab qui effectue 8 diodes le de façon
+instantané. Cela permet de faire un additionneur de chemin critique constant
+peu importe le nombre de bits (modulo la limmite de propagation du signal).
+Deux tours de slab permettent à elles seules de progaper toutes les retenues.
+Avec une petite astuce sur les signaux de génération et de blocage de propagation.
+Le
+nouveau additionneur réalise une addition en 0.5 secondes! En rajoutant les
+drapeux, une retenue entrante, un XOR et un OR on a un ALU qui prend moins
+d'une seconde. Pour rajouter un XOR il suffit d'empêcher les retenues de se
+propager. Ajouter un OR est aussi assez facile en réutilisant les portes déjà
+présentent dans l'additionneur.
+
+Il faudrait rajouter des inverseurs controllés en entré et en sortie. Cela
+permet de faire un AND.
+
+On voulait aussi rajouter un barrel shifter.
+
+Les drapeaux sont implémentés par des registres à décalage et non des registres
+classiques.
 
 #### ROM
+La ROM nous adonné du fil à retordre. On était initialement partit sur des mots
+de 16 bits en superposant certain bits mais cela c'est avéré trop compliqué
+pour la plomberie. En effet il fallait décoder certain bit  afin de pouvoir
+interprétere le reste. On est donc partit sur des mots de 32 bits. Il nous
+reste quelques bit de marge pour ajouter des fonctionnalités.
+
+On a fait plusieurs prototypes de ROM. Initialement on pensait utiliser une RAM
+sans la partie écritue. Il s'avère que cela est trop gros et trop lent pour 128
+mots ROM.
 
 #### Registres
+On utilise des registrse à double lecture. Cela permet de gagner beaucoup de
+temps.
 
 #### RAM
 
